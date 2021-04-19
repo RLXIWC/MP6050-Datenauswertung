@@ -170,9 +170,9 @@ void loop() {
 void correctValues(sensors_event_t &a, sensors_event_t &g)
 {
     // Acceleretor Werte anpassen
-    a.acceleration.x -= 0.69;
-    a.acceleration.y += 0.31;
-    a.acceleration.z += 1.5;
+    a.acceleration.x -= 0.66;
+    a.acceleration.y += 0.36;
+    a.acceleration.z += 1.51;
 
     // Gyro Werte anpassen
     g.gyro.x +=0.01;

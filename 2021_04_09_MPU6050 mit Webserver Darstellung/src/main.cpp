@@ -22,7 +22,7 @@
  
 // Replace with your network credentials
 const char* ssid = "Maier-Gerber";
-const char* password = "";
+const char* password = "xxx";
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
@@ -51,9 +51,11 @@ float accX, accY, accZ;
 float temperature;
 
 //Gyroscope sensor deviation
-float gyroXerror = 0.07;
+float gyroXerror = 0.01;
 float gyroYerror = 0.03;
-float gyroZerror = 0.01;
+float gyroZerror = 0.05;
+
+
 
 // Init MPU6050
 void initMPU(){
@@ -90,9 +92,9 @@ void initWiFi() {
 String getGyroReadings(){
   mpu.getEvent(&a, &g, &temp);
 
-  float gyroX_temp = g.gyro.x;
-  if(abs(gyroX_temp) > gyroXerror)  {
-    gyroX += gyroX_temp/50.00;
+  float gyroX_temp = g.gyro.x;                                    
+  if(abs(gyroX_temp) > gyroXerror)  {                                     // Prüfen ob neue Werte größer sind wie Offset
+    gyroX += gyroX_temp/50.00;                                            // Wenn ja rechne in Winkel um --> Das ist quasi die Integration
   }
   
   float gyroY_temp = g.gyro.y;
@@ -119,6 +121,12 @@ String getAccReadings() {
   accX = a.acceleration.x;
   accY = a.acceleration.y;
   accZ = a.acceleration.z;
+
+  // Acceleretor Werte anpassen
+  accX -= 0.66;
+  accY += 0.36;
+  accZ += 1.51;
+
   readings["accX"] = String(accX);
   readings["accY"] = String(accY);
   readings["accZ"] = String(accZ);
