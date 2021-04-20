@@ -22,7 +22,7 @@
  
 // Replace with your network credentials
 const char* ssid = "Maier-Gerber";
-const char* password = "xxx";
+const char* password = "qc004buzzz2ocjrjcd3ss";
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
@@ -123,10 +123,11 @@ String getAccReadings() {
   accZ = a.acceleration.z;
 
   // Acceleretor Werte anpassen
+  /*
   accX -= 0.66;
   accY += 0.36;
   accZ += 1.51;
-
+*/
   readings["accX"] = String(accX);
   readings["accY"] = String(accY);
   readings["accZ"] = String(accZ);
@@ -145,6 +146,7 @@ void setup() {
   initWiFi();
   initSPIFFS();
   initMPU();
+  Wire.setClock(400000);                                                                          // I2C auf 400 kHz setzen
 
   // Handle Web Server
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
