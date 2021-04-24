@@ -1,83 +1,87 @@
-//Lib fuer I2C Sensor MPU6050 und anderen Sensoren
-#include "I2Cdev.h"
+/* Titel: Quaternionen mit 2 Sensoren am ESP32
+*
+* Version: v1.0
+* Autor: Jeremy Kunz
+* Datum: 23.04.2021
+*
+* Kurze Beschreibung:
+* Auslesen von 2 MPU6050 Sensordaten, Speichern in Quaternionen, Multiplikation und Ausgabe
+*
+* Ausgabe:
+* Quaternionen und Produkt
+*
+* Anschluss weiterer Elektronik:
+* 2x MPU6050 per I2C anschließen, VCC, GND, SCL an PIN 23, SDA an PIN 21 (ESP32)
+* zweiter MPU erhält Spannungsversorgung über AD0 statt über VCC (andere Adresse im I2C Bus)
+*
+* Changelog:
+* 24.04.2021 Kommentare (Heiko)
+*  
+*/
 
-//MU6050 Lib von I2CDev
-#include "MPU6050_6Axis_MotionApps_V6_12.h"
 
-// Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
-// is used in I2Cdev.h
+//################################################################//
+//########################## Includes ############################//
+//################################################################//
+
+#include "I2Cdev.h"                                                                                                     // Library für I2C Sensor MPU6050 und anderen Sensoren
+#include "MPU6050_6Axis_MotionApps_V6_12.h"                                                                             // MU6050 Library von I2CDev
+
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-#include "Wire.h"
-#endif
+#include "Wire.h"                                                                                                       // Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
+#endif                                                                                                                  // is used in I2Cdev.h
 
-// class default I2C address is 0x68
-// specific I2C addresses may be passed as a parameter here
-// AD0 low = 0x68 (default for SparkFun breakout and InvenSense evaluation board)
-// AD0 high = 0x69
 
-//Erstellen eines Sensorobjektes, default ist Standardadresse 0x68, 0x69 ist zweite Adresse
-MPU6050 firstMPUSensor;
-MPU6050 secondMPUSensor(0x69);
+//// Sensorobjekte ////
+MPU6050 firstMPUSensor;                                                                                                 // default Adresse is 0x68
+MPU6050 secondMPUSensor(0x69);                                                                                          // zweite Adresse auf 0x69 setzen
 
-// uncomment "OUTPUT_READABLE_QUATERNION" if you want to see the actual
-// quaternion components in a [w, x, y, z] format (not best for parsing
-// on a remote host such as Processing or something though)
+
+//################################################################//
+//########################## Defines #############################//
+//################################################################//
+
+
 #define OUTPUT_READABLE_QUATERNION
-
-// uncomment "OUTPUT_READABLE_EULER" if you want to see Euler angles
-// (in degrees) calculated from the quaternions coming from the FIFO.
-// Note that Euler angles suffer from gimbal lock (for more info, see
-// http://en.wikipedia.org/wiki/Gimbal_lock)
 //#define OUTPUT_READABLE_EULER
-
-// uncomment "OUTPUT_READABLE_YAWPITCHROLL" if you want to see the yaw/
-// pitch/roll angles (in degrees) calculated from the quaternions coming
-// from the FIFO. Note this also requires gravity vector calculations.
-// Also note that yaw/pitch/roll angles suffer from gimbal lock (for
-// more info, see: http://en.wikipedia.org/wiki/Gimbal_lock)
 //#define OUTPUT_READABLE_YAWPITCHROLL
-
-// uncomment "OUTPUT_READABLE_REALACCEL" if you want to see acceleration
-// components with gravity removed. This acceleration reference frame is
-// not compensated for orientation, so +X is always +X according to the
-// sensor, just without the effects of gravity. If you want acceleration
-// compensated for orientation, us OUTPUT_READABLE_WORLDACCEL instead.
 //#define OUTPUT_READABLE_REALACCEL
-
-// uncomment "OUTPUT_READABLE_WORLDACCEL" if you want to see acceleration
-// components with gravity removed and adjusted for the world frame of
-// reference (yaw is relative to initial orientation, since no magnetometer
-// is present in this case). Could be quite handy in some cases.
 //#define OUTPUT_READABLE_WORLDACCEL
 
-//Definieren der Pins fuer den I2C
+//// Definieren der Pins fuer den I2C ////
 #define SDA 21
 #define SCL 23
 
-// MPU Status und Kontrollevariablen
-bool dmpReady = false;            // set true if DMP init was successful
-uint8_t mpuIntStatus;             // holds actual interrupt status byte from MPU
-uint8_t mpuIntStatus2;            // holds actual interrupt status byte from MPU
-uint8_t devStatus;                // return status after each device operation (0 = success, !0 = error)
-uint8_t devStatus2;               // return status after each device operation (0 = success, !0 = error)
-uint16_t packetSize, packetSize2; // expected DMP packet size (default is 42 bytes)
-uint16_t fifoCount;               // count of all bytes currently in FIFO
-uint8_t fifoBuffer[64];           // FIFO storage buffer
-uint8_t fifoBuffer2[64];          // FIFO storage buffer
 
-// orientation/motion vars
-Quaternion firstQuaternion, secondQuaternion, productResult; // [w, x, y, z]         quaternion container
-VectorInt16 aa, aa2;                                         // [x, y, z]            accel sensor measurements
-VectorInt16 gy, gy2;                                         // [x, y, z]            gyro sensor measurements
-VectorInt16 aaReal, aaReal2;                                 // [x, y, z]            gravity-free accel sensor measurements
-VectorInt16 aaWorld, aaWorld2;                               // [x, y, z]            world-frame accel sensor measurements
-VectorFloat gravity, gravity2;                               // [x, y, z]            gravity vector
-float euler[3];                                              // [psi, theta, phi]    Euler angle container
-float ypr[3];                                                // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+//################################################################//
+//###################### globale Variablen #######################//
+//################################################################//
 
-// ================================================================
-// ===                      INITIAL SETUP                       ===
-// ================================================================
+//// MPU Status und Kontrollevariablen /////
+bool dmpReady = false;                                                                                                    // DPM Status, wenn Init erfolgreich -> auf true setzen
+uint8_t mpuIntStatus;                                                                                                     // Interrupt Status Byte vom MPU
+uint8_t mpuIntStatus2;                                                                                                    // weiteres Interrupt Status Byte vom MPU
+uint8_t devStatus;                                                                                                        // Status des Device nach Ausführung einer Operation (0 = success, !0 = error)
+uint8_t devStatus2;                                                                                                       // Status des Device nach Ausführung einer Operation (0 = success, !0 = error)
+uint16_t packetSize, packetSize2;                                                                                         // DMP packet size (default sind 42 bytes)
+uint16_t fifoCount;                                                                                                       // Aktuelle Byte Anzahl in der FIFO Queue
+uint8_t fifoBuffer[64];                                                                                                   // FIFO Storage Buffer 1
+uint8_t fifoBuffer2[64];                                                                                                  // FIFO Storage Buffer2
+
+//// Quaternionen Objekte ////
+Quaternion firstQuaternion, secondQuaternion, productResult;                                                              // [w, x, y, z]         Quatenrionen Objekt
+VectorInt16 aa, aa2;                                                                                                      // [x, y, z]            Acellerometer Sensor Werte
+VectorInt16 gy, gy2;                                                                                                      // [x, y, z]            Gyrometer Sensor Werte
+VectorInt16 aaReal, aaReal2;                                                                                              // [x, y, z]            gravity-free accel sensor measurements
+VectorInt16 aaWorld, aaWorld2;                                                                                            // [x, y, z]            world-frame accel sensor measurements
+VectorFloat gravity, gravity2;                                                                                            // [x, y, z]            gravity vector
+float euler[3];                                                                                                           // [psi, theta, phi]    Euler angle container
+float ypr[3];                                                                                                             // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+
+
+//################################################################//
+//########################### SETUP ##############################//
+//################################################################//
 
 void setup()
 {
@@ -148,9 +152,9 @@ void setup()
   }
 }
 
-// ================================================================
-// ===                    MAIN PROGRAM LOOP                     ===
-// ================================================================
+//################################################################//
+//############################ Loop  #############################//
+//################################################################//
 
 void loop()
 {
