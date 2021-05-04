@@ -72,5 +72,5 @@ void loop() {
   } else {
     Serial.println("done\n");
   }
-  delay(5000); // Wait 5 seconds for next scan
+  delay(1000); // Wait 5 seconds for next scan
 }
