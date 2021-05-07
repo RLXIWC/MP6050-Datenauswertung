@@ -64,12 +64,12 @@ uint16_t fifo_count_Sensor_1;                                                   
 uint16_t fifo_count_Sensor_2;                                                                                                    // Speichervariable für die aktuellen FIFO Größe für Sensor 2
 
 ///// Interrupt /////
-bool Sensor_1_Interrupt = false;                                                                                    // Interrupt Status Sensor 1                                                 
-bool Sensor_2_Interrupt = false;                                                                                    // Interrupt Stauts Sensor 2                                                 
+bool Sensor_1_Interrupt_Bool_Status = false;                                                                                    // Interrupt Status Sensor 1                                                 
+bool Sensor_2_Interrupt_Bool_Status = false;                                                                                    // Interrupt Stauts Sensor 2                                                 
 
 ///// Interrupt Status /////
-uint8_t Sensor_1_Interrupt_Status;                                                                                  // Statuswert des Interrupt von Sensor 1
-uint8_t Sensor_2_Interrupt_Status;                                                                                  // Statuswert des Interrupt von Sensor 2
+uint8_t Sensor_1_Interrupt_Int_Status;                                                                                  // Statuswert des Interrupt von Sensor 1
+uint8_t Sensor_2_Interrupt_Int_Status;                                                                                  // Statuswert des Interrupt von Sensor 2
 
 
 ///// DMP Status/////
@@ -119,12 +119,12 @@ void HextoDezimal(int *Dezimal_output, const char* Hex_input)
 
 void Data_Available_ISR_Sensor_1()
 {
-    Sensor_1_Interrupt = true;                                                                                              // Interrupt Flag setzten für Sensor 1
+    Sensor_1_Interrupt_Bool_Status = true;                                                                                              // Interrupt Flag setzten für Sensor 1
 }
 
 void Data_Available_ISR_Sensor_2()
 {
-    Sensor_2_Interrupt = true;                                                                                              // Interrupt Flag setzten für Sensor 2
+    Sensor_2_Interrupt_Bool_Status = true;                                                                                              // Interrupt Flag setzten für Sensor 2
 }
 
 
@@ -140,7 +140,7 @@ void setup()
 
     /// Serielle Schnittstelle ///
     Serial.begin(115200);                                                                                               // Konsolen ausgabe ermöglichen
-   
+    while (!Serial);
 
 
     /// Sensoren aktivieren ///
@@ -170,21 +170,22 @@ void setup()
         Serial.println("Verbindung zum zweiten Sensor NICHT erfogreich");
     }
 
+    /*
     /// Serial Buffer leeren ///
     Serial.println("Send any character to begin DMP programming and demo: ");
     while (Serial.available() && Serial.read()) // empty buffer
     {
         Serial.println("emtpy buffer");
     }
-    while (!Serial.available());                 // wait for data
+    while (!Serial.available())                // wait for data
     {
         Serial.println("wait for data");
     }
-    while (Serial.available() && Serial.read()); // empty buffer again
+    while (Serial.available() && Serial.read()) // empty buffer again
     {
         Serial.println("emtpy again");
     }
-
+*/
 
     /// Initialisieren der Sensor DMP ///
     Serial.println(F("Initalisieren der DMP..."));
@@ -199,6 +200,8 @@ void setup()
 
         attachInterrupt(5, Data_Available_ISR_Sensor_1,RISING);                                                               // Interrupt Routine zuwesien Sensor 1 - Pin 18
         //attachInterrupt(4, Data_Available_ISR_Sensor_2,RISING);                                                               // Interrupt Routine zuwesien Sensor 2 - Pin 19
+
+        dmpReady = true;
 
         /// Abfragen der Paketgröße //
         packetSize = Sensor_1.dmpGetFIFOPacketSize();                                                                         // PacketSize einspeichern, die wir in der Initialize festgelegt haben 
@@ -270,7 +273,7 @@ void setup()
 
 void loop()
 {
-    if(!DMP_Status_Int_Sensor_1)                                                                                              // Initialize nicht funktioniert -> kein Start 
+    if(!dmpReady)                                                                                              // Initialize nicht funktioniert -> kein Start 
     {
         Serial.print("DMP Stauts failed -> return im Loop");
         return;                                 
@@ -279,28 +282,28 @@ void loop()
 
 
     /// Weitere Aufgaben auf dem Controller ///
-    while(!Sensor_1_Interrupt && fifo_count_Sensor_1 <packetSize)
+    while(!Sensor_1_Interrupt_Bool_Status && fifo_count_Sensor_1 <packetSize)
     {
         Serial.println("Other Stuff");
         // Do Other stuff
     }
 
-    Sensor_1_Interrupt = false;                                                                                                 // Interrupt flag Sensro 1 zurücksetzten
-    //Sensor_2_Interrupt = false;                                                                                                 // Interrupt flag Sensor 2 zurücksetzten
+    Sensor_1_Interrupt_Bool_Status = false;                                                                                                 // Interrupt flag Sensro 1 zurücksetzten
+    //Sensor_2_Interrupt_Bool_Status = false;                                                                                                 // Interrupt flag Sensor 2 zurücksetzten
 
     /// Interrupt FIFO auslesen ///
-    Sensor_1_Interrupt_Status = Sensor_1.getIntStatus();                                                                        // Abfragen des aktuellen Interrupt Status Sensor 1
-    //Sensor_2_Interrupt_Status = Sensor_2.getIntStatus();                                                                        // Abfragen des aktuellen Interrupt Status Sensor 2
+    Sensor_1_Interrupt_Int_Status = Sensor_1.getIntStatus();                                                                        // Abfragen des aktuellen Interrupt Status Sensor 1
+    //Sensor_2_Interrupt_Int_Status = Sensor_2.getIntStatus();                                                                        // Abfragen des aktuellen Interrupt Status Sensor 2
 
-    Serial.println("Sensor_1_Interrupt_Status :");
-    Serial.println(Sensor_1_Interrupt_Status);
+    Serial.println("Sensor_1_Interrupt_Int_Status :");
+    Serial.println(Sensor_1_Interrupt_Int_Status);
 
     /// FIFO Count lesen ///
     fifo_count_Sensor_1 = Sensor_1.getFIFOCount();
 
 
     /// Overflow Interrupt prüfen ///
-    if((Sensor_1_Interrupt_Status & 0x10) || fifo_count_Sensor_1 == 1024)
+    if((Sensor_1_Interrupt_Int_Status & 0x10) || fifo_count_Sensor_1 == 1024)
     {
         Sensor_1.resetFIFO();
         Serial.println("Warnung! FIFO overflow!");
@@ -308,7 +311,7 @@ void loop()
 
     
     /// Data Available Interrupt prüfen ///
-    if(Sensor_1_Interrupt_Status & 0x02)                                                                                        // veroderung mit 0x02 damit if Bedingung ausgeführt wird
+    if(Sensor_1_Interrupt_Int_Status & 0x02)                                                                                        // veroderung mit 0x02 damit if Bedingung ausgeführt wird
     {
         // Warten bis genügend Daten im FIFO vorhanden
         while(fifo_count_Sensor_1 < packetSize)
