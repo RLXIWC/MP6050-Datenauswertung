@@ -41,22 +41,49 @@ MPU6050 Sensor_2(MPU6050_ADDRESS_AD0_HIGH);                                     
 
 
 ///// I2C Pins zuweisen /////  
-#define SDA_Pin 20;                                                                                                     // Seriell Data Pin
-#define SCL_Pin 21;                                                                                                     // Seriell Clock Pin (Entwicklungsboard aber anderst verdrahtet)
+#define SDA_Pin 20                                                                                                     // Seriell Data Pin
+#define SCL_Pin 21                                                                                                     // Seriell Clock Pin (Entwicklungsboard aber anderst verdrahtet)
 
+///// Interrupt Pin /////
+#define interruptPin_Sensor_1 18                                                                                       // Interrupt Pin für ATMega 2560 für Sensor 1
+#define interruptPin_Sensor_2 19                                                                                       // Interrupt Pin für ATMega 2560 für Sensor 2
 
 
 //################################################################//
 //###################### globale Variablen #######################//
 //################################################################//
 
-///// DMP /////
-bool DMP_Status_Sensor_1 = false;                                                                                       // Status des Digital Motion Processor des Sensor 1 (zu Beginn auf false - nicht init)
-bool DMP_Status_Sensor_2 = false;                                                                                       // Status des Digital Motion Processor des Sensor 2    
+///// DMP Status /////
+uint8_t dmpStatus;                                                                                                  // Status des DMP als Wert
+bool dmpReady = false;                                                                                              // Status des DMP als Boolean
+
+
+///// aktuelle FIFO Groesse /////
+
+uint16_t fifo_count_Sensor_1;                                                                                                    // Speichervariable für die aktuellen FIFO Größe für Sensor 1
+uint16_t fifo_count_Sensor_2;                                                                                                    // Speichervariable für die aktuellen FIFO Größe für Sensor 2
+
+///// Interrupt /////
+bool Sensor_1_Interrupt = false;                                                                                    // Interrupt Status Sensor 1                                                 
+bool Sensor_2_Interrupt = false;                                                                                    // Interrupt Stauts Sensor 2                                                 
+
+///// Interrupt Status /////
+uint8_t Sensor_1_Interrupt_Status;                                                                                  // Statuswert des Interrupt von Sensor 1
+uint8_t Sensor_2_Interrupt_Status;                                                                                  // Statuswert des Interrupt von Sensor 2
+
+
+///// DMP Status/////
+bool DMP_Status_Bool_Sensor_1 = false;                                                                               // Status des Digital Motion Processor des Sensor 1 (zu Beginn auf false - nicht init)
+bool DMP_Status_Bool_Sensor_2 = false;                                                                               // Status des Digital Motion Processor des Sensor 2    
+uint8_t DMP_Status_Int_Sensor_1;                                                                                     // Status des DMP als Wert Sensor 1
+uint8_t DMP_Status_Int_Sensor_2;                                                                                     // Status des DMP als Wert Sensor 2
+
+///// Paketgröße zum FIFO lesen ////
+uint16_t packetSize;                                                                                                // wird im Initialize auf 28 Byte festgelegt (16 Byte für Quaternionen, 6 Acc, 6 Gyro)
 
 ///// Data Array aus FIFO /////
-uint8_t Data_Array_Sensor_1[64];                                                                                           // hier werden die Bytes aus dem FIFO von Sensor 1 eingelesen (kommen als Hex Werte an)                                                                                  
-uint8_t Data_Array_Sensor_2[64];                                                                                           // hier werden die Bytes aus dem FIFO von Sensor 2 eingelesen 
+uint8_t Data_Array_Sensor_1[64];                                                                                    // hier werden die Bytes aus dem FIFO von Sensor 1 eingelesen (kommen als Hex Werte an)                                                                                  
+uint8_t Data_Array_Sensor_2[64];                                                                                     // hier werden die Bytes aus dem FIFO von Sensor 2 eingelesen 
 
 
 ///// Beschleunigungswerte /////
@@ -68,6 +95,18 @@ VectorInt16 Gyro_Values_Sensor_1;                                               
 VectorInt16 Gyro_Values_Sensor_2;                                                                                          // speichert die Drehraten / Drehgeschwindigkeit um alle 3 Achsen in Grad/sec von Sensor 2
 
 
+///// Quaternionen Objekte /////
+Quaternion quaternion_Sensor_1;                                                                                         // speichert Quaternionen Werte von Sensor 1 - Winkel und Drehachse in x, y, z Richtung                            
+Quaternion quaternion_Sensor_2;                                                                                         // speichert Quaternionen Werte von Sensor 2 - Winkel und Drehachse in x, y, z Richtung                            
+
+///// Gravity Vektor /////
+VectorFloat gravity_Sensor_1;                                                                                           // Speichert Vektor der Richtung der Erdbeschleunigung
+VectorFloat gravity_Sensor_2;                                                                                           // Speichert Vektor der Richtung der Erdbeschleunigung
+
+///// Gravity Vektor /////
+float yaw_pitch_roll_Sensor_1[3];                                                                                          // Speichert den jeweiligen Winkel zur x, y, z Achse - Sensor 1
+float yaw_pitch_roll_Sensor_2[3];                                                                                          // Speichert den jeweiligen Winkel zur x, y, z Achse - Sensor 2
+
 
 //################################################################//
 //######################### Functions ############################//
@@ -78,6 +117,16 @@ void HextoDezimal(int *Dezimal_output, const char* Hex_input)
 
 }
 
+void Data_Available_ISR_Sensor_1()
+{
+    Sensor_1_Interrupt = true;                                                                                              // Interrupt Flag setzten für Sensor 1
+}
+
+void Data_Available_ISR_Sensor_2()
+{
+    Sensor_2_Interrupt = true;                                                                                              // Interrupt Flag setzten für Sensor 2
+}
+
 
 //################################################################//
 //########################### SETUP ##############################//
@@ -85,13 +134,20 @@ void HextoDezimal(int *Dezimal_output, const char* Hex_input)
 
 void setup()
 {
+    /// I2C einrichten ///
     Wire.begin();                                                                                                       // Starte I2C
     Wire.setClock(400000);                                                                                              // Übertragungsgeschwindigkeit auf 400 kHz setzen (Fastwire)
 
+    /// Serielle Schnittstelle ///
     Serial.begin(115200);                                                                                               // Konsolen ausgabe ermöglichen
+   
+
+
+    /// Sensoren aktivieren ///
     Serial.println("Initalisieren der Sensoren ueber I2C ....");
     Sensor_1.initialize();                                                                                              // legt fest: clock Quelle für die Gyro -> Winkel Berechnung  // MPU sleep deaktivieren // g Range auf +- 2g // Gyro Range auf +# 250° / sec
-    Sensor_2.initialize();
+    //Sensor_2.initialize();
+
 
     /// Verbingungstest Sensor 1 ///
     if(Sensor_1.testConnection())
@@ -114,12 +170,44 @@ void setup()
         Serial.println("Verbindung zum zweiten Sensor NICHT erfogreich");
     }
 
+    /// Serial Buffer leeren ///
+    Serial.println("Send any character to begin DMP programming and demo: ");
+    while (Serial.available() && Serial.read()) // empty buffer
+    {
+        Serial.println("emtpy buffer");
+    }
+    while (!Serial.available());                 // wait for data
+    {
+        Serial.println("wait for data");
+    }
+    while (Serial.available() && Serial.read()); // empty buffer again
+    {
+        Serial.println("emtpy again");
+    }
+
 
     /// Initialisieren der Sensor DMP ///
     Serial.println(F("Initalisieren der DMP..."));
-    DMP_Status_Sensor_1 = Sensor_1.dmpInitialize();                                                                      // wenn funktioniert wird Status = 0   // beschreiben der DMP Register Sensor 1 // Gyro Range wird auf +- 2000 °/sec gesetzt
-    DMP_Status_Sensor_2 = Sensor_2.dmpInitialize();                                                                      // wenn funktioniert wird Status = 0   // beschreiben der DMP Register Sensor 2 // Gyro Range wird auf +- 2000 °/sec gesetzt
+    DMP_Status_Int_Sensor_1 = Sensor_1.dmpInitialize();                                                                      // wenn funktioniert wird Status = 0   // beschreiben der DMP Register Sensor 1 // Gyro Range wird auf +- 2000 °/sec gesetzt // FIFO Data available interrupt wird aktiviert
+    //DMP_Status_Int_Sensor_2 = Sensor_2.dmpInitialize();                                                                      // wenn funktioniert wird Status = 0   // beschreiben der DMP Register Sensor 2 // Gyro Range wird auf +- 2000 °/sec gesetzt // FIFO Data available interrupt wird aktiviert
 
+    if(DMP_Status_Int_Sensor_1 == 0)
+    {
+        /// Interrupts ///
+        Sensor_1.setDMPEnabled(true);                                                                                         // Interrupts enablen Sensor 1
+        //Sensor_2.setDMPEnabled(true);                                                                                         // Interrupts enablen Sensor 2
+
+        attachInterrupt(5, Data_Available_ISR_Sensor_1,RISING);                                                               // Interrupt Routine zuwesien Sensor 1 - Pin 18
+        //attachInterrupt(4, Data_Available_ISR_Sensor_2,RISING);                                                               // Interrupt Routine zuwesien Sensor 2 - Pin 19
+
+        /// Abfragen der Paketgröße //
+        packetSize = Sensor_1.dmpGetFIFOPacketSize();                                                                         // PacketSize einspeichern, die wir in der Initialize festgelegt haben 
+    }
+    else
+    {
+        Serial.println("Initialzie failed -> press RESET");
+
+    }
 
 
     /* /// Offset setzen wir erst nach Filter Test ///
@@ -169,6 +257,11 @@ void setup()
     }
     */
 
+
+    ///// Testausgabe Überschrift /////
+    Serial.println("x-Achse, y-Achse, z-Achse");
+
+
 }
 
 //################################################################//
@@ -177,22 +270,76 @@ void setup()
 
 void loop()
 {
-  
-    Sensor_1.dmpGetCurrentFIFOPacket(Data_Array_Sensor_1);
-    Sensor_2.dmpGetCurrentFIFOPacket(Data_Array_Sensor_2);
-
-    Sensor_1.dmpGetGyro(&Gyro_Values_Sensor_1,Data_Array_Sensor_1);
-
-
-
-
-        Serial.print(Gyro_Values_Sensor_1.x);
-        Serial.print(Gyro_Values_Sensor_1.y);
-        Serial.print(Gyro_Values_Sensor_1.z);
+    if(!DMP_Status_Int_Sensor_1)                                                                                              // Initialize nicht funktioniert -> kein Start 
+    {
+        Serial.print("DMP Stauts failed -> return im Loop");
+        return;                                 
+    }
+    
 
 
+    /// Weitere Aufgaben auf dem Controller ///
+    while(!Sensor_1_Interrupt && fifo_count_Sensor_1 <packetSize)
+    {
+        Serial.println("Other Stuff");
+        // Do Other stuff
+    }
 
-    delay(1000);
+    Sensor_1_Interrupt = false;                                                                                                 // Interrupt flag Sensro 1 zurücksetzten
+    //Sensor_2_Interrupt = false;                                                                                                 // Interrupt flag Sensor 2 zurücksetzten
+
+    /// Interrupt FIFO auslesen ///
+    Sensor_1_Interrupt_Status = Sensor_1.getIntStatus();                                                                        // Abfragen des aktuellen Interrupt Status Sensor 1
+    //Sensor_2_Interrupt_Status = Sensor_2.getIntStatus();                                                                        // Abfragen des aktuellen Interrupt Status Sensor 2
+
+    Serial.println("Sensor_1_Interrupt_Status :");
+    Serial.println(Sensor_1_Interrupt_Status);
+
+    /// FIFO Count lesen ///
+    fifo_count_Sensor_1 = Sensor_1.getFIFOCount();
+
+
+    /// Overflow Interrupt prüfen ///
+    if((Sensor_1_Interrupt_Status & 0x10) || fifo_count_Sensor_1 == 1024)
+    {
+        Sensor_1.resetFIFO();
+        Serial.println("Warnung! FIFO overflow!");
+    }
+
+    
+    /// Data Available Interrupt prüfen ///
+    if(Sensor_1_Interrupt_Status & 0x02)                                                                                        // veroderung mit 0x02 damit if Bedingung ausgeführt wird
+    {
+        // Warten bis genügend Daten im FIFO vorhanden
+        while(fifo_count_Sensor_1 < packetSize)
+        {
+            fifo_count_Sensor_1 = Sensor_1.getFIFOCount();                                                                      // aktualisieren des aktuellen FIFO Counts Sensor 1
+        }
+
+        fifo_count_Sensor_1 -= packetSize;                                                                                      // Rücksetzten des FIFO Counts um zu lesende Paketgröße
+
+        /// Abholen der Daten in Paketgröße ///
+        Sensor_1.getFIFOBytes(Data_Array_Sensor_1,packetSize);
+        //Sensor_2.getFIFOBytes(Data_Array_Sensor_2,packetSize);
+
+        Sensor_1.dmpGetQuaternion(&quaternion_Sensor_1,Data_Array_Sensor_1);
+        //Sensor_2.dmpGetQuaternion(&quaternion_Sensor_2,Data_Array_Sensor_2);
+
+        Sensor_1.dmpGetGravity(&gravity_Sensor_1,&quaternion_Sensor_1);
+        //Sensor_2.dmpGetGravity(&gravity_Sensor_2,&quaternion_Sensor_2);
+        
+        Sensor_1.dmpGetYawPitchRoll(yaw_pitch_roll_Sensor_1,&quaternion_Sensor_1,&gravity_Sensor_1);
+        //Sensor_2.dmpGetYawPitchRoll(yaw_pitch_roll_Sensor_2,&quaternion_Sensor_2,&gravity_Sensor_2);
+
+        /// Serielle Ausgabe ///
+        Serial.print(yaw_pitch_roll_Sensor_1[0] * 180 / M_PI);
+        Serial.print(", ");
+        Serial.print(yaw_pitch_roll_Sensor_1[1] * 180 / M_PI);
+        Serial.print(", ");
+        Serial.print(yaw_pitch_roll_Sensor_1[2] * 180 / M_PI);
+        Serial.println(", ");
+    }
+
 
 
 
