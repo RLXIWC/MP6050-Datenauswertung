@@ -120,6 +120,9 @@ void HextoDezimal(int *Dezimal_output, const char* Hex_input)
 void Data_Available_ISR_Sensor_1()
 {
     Sensor_1_Interrupt_Bool_Status = true;                                                                                              // Interrupt Flag setzten für Sensor 1
+    Serial.print("Interrupt ausgeloest :");
+    //Serial.print(Sensor_1.getIntStatus());
+    //Serial.println("");
 }
 
 void Data_Available_ISR_Sensor_2()
@@ -198,17 +201,19 @@ void setup()
         Sensor_1.setDMPEnabled(true);                                                                                         // Interrupts enablen Sensor 1
         //Sensor_2.setDMPEnabled(true);                                                                                         // Interrupts enablen Sensor 2
 
-        attachInterrupt(5, Data_Available_ISR_Sensor_1,RISING);                                                               // Interrupt Routine zuwesien Sensor 1 - Pin 18
+        attachInterrupt(4, Data_Available_ISR_Sensor_1,RISING);                                                               // Interrupt Routine zuwesien Sensor 1 - Pin 18
         //attachInterrupt(4, Data_Available_ISR_Sensor_2,RISING);                                                               // Interrupt Routine zuwesien Sensor 2 - Pin 19
 
         dmpReady = true;
 
         /// Abfragen der Paketgröße //
         packetSize = Sensor_1.dmpGetFIFOPacketSize();                                                                         // PacketSize einspeichern, die wir in der Initialize festgelegt haben 
+    
+        Serial.println("DMP Sensor 1 Initializing Succeeded");
     }
     else
     {
-        Serial.println("Initialzie failed -> press RESET");
+        Serial.println("Initializing failed -> press RESET");
 
     }
 
@@ -282,13 +287,13 @@ void loop()
 
 
     /// Weitere Aufgaben auf dem Controller ///
-    while(!Sensor_1_Interrupt_Bool_Status && fifo_count_Sensor_1 <packetSize)
+    while(!Sensor_1_Interrupt_Bool_Status && fifo_count_Sensor_1 < packetSize)                                                          // noch kein Interrupt und der FIFO noch kleiner als ein abzuholendes Paket
     {
         Serial.println("Other Stuff");
         // Do Other stuff
     }
 
-    Sensor_1_Interrupt_Bool_Status = false;                                                                                                 // Interrupt flag Sensro 1 zurücksetzten
+    Sensor_1_Interrupt_Bool_Status = false;                                                                                                 // Interrupt flag Sensor 1 driekt wieder zurücksetzten nach ISR
     //Sensor_2_Interrupt_Bool_Status = false;                                                                                                 // Interrupt flag Sensor 2 zurücksetzten
 
     /// Interrupt FIFO auslesen ///
@@ -319,11 +324,11 @@ void loop()
             fifo_count_Sensor_1 = Sensor_1.getFIFOCount();                                                                      // aktualisieren des aktuellen FIFO Counts Sensor 1
         }
 
-        fifo_count_Sensor_1 -= packetSize;                                                                                      // Rücksetzten des FIFO Counts um zu lesende Paketgröße
-
-        /// Abholen der Daten in Paketgröße ///
+                /// Abholen der Daten in Paketgröße ///
         Sensor_1.getFIFOBytes(Data_Array_Sensor_1,packetSize);
         //Sensor_2.getFIFOBytes(Data_Array_Sensor_2,packetSize);
+
+        fifo_count_Sensor_1 -= packetSize;                                                                                      // Rücksetzten des FIFO Counts um zu lesende Paketgröße
 
         Sensor_1.dmpGetQuaternion(&quaternion_Sensor_1,Data_Array_Sensor_1);
         //Sensor_2.dmpGetQuaternion(&quaternion_Sensor_2,Data_Array_Sensor_2);
@@ -340,7 +345,7 @@ void loop()
         Serial.print(yaw_pitch_roll_Sensor_1[1] * 180 / M_PI);
         Serial.print(", ");
         Serial.print(yaw_pitch_roll_Sensor_1[2] * 180 / M_PI);
-        Serial.println(", ");
+        Serial.println("");
     }
 
 
