@@ -56,7 +56,7 @@ MPU6050 Sensor_2(MPU6050_ADDRESS_AD0_HIGH);                                     
 ///// AUSGABE DEFINES /////
 
 //#define YAW_PITCH_ROLL
-//#define EULER
+//#define EULER_VALUES
 #define Raw_ACCEL_GYRO
 
 
@@ -305,57 +305,10 @@ void loop()
     
 
 
-    /// Weitere Aufgaben auf dem Controller ///
-   /*
-    while(!Sensor_1_Interrupt_Bool_Status && fifo_count_Sensor_1 < packetSize)                                                          // noch kein Interrupt und der FIFO noch kleiner als ein abzuholendes Paket
-    {
-        Serial.println("Other Stuff");
-        // Do Other stuff
-    }
-  */
+    /// Abholen der Daten in Paketgröße ///
 
-    //Sensor_1_Interrupt_Bool_Status = false;                                                                                                 // Interrupt flag Sensor 1 driekt wieder zurücksetzten nach ISR
-    //Sensor_2_Interrupt_Bool_Status = false;                                                                                                 // Interrupt flag Sensor 2 zurücksetzten
-
-    /// Interrupt FIFO auslesen ///
-    //Sensor_1_Interrupt_Int_Status = Sensor_1.getIntStatus();                                                                        // Abfragen des aktuellen Interrupt Status Sensor 1
-    //Sensor_2_Interrupt_Int_Status = Sensor_2.getIntStatus();                                                                        // Abfragen des aktuellen Interrupt Status Sensor 2
-
-    //Serial.println("Sensor_1_Interrupt_Int_Status :");
-    //Serial.println(Sensor_1_Interrupt_Int_Status);
-
-    /// FIFO Count lesen ///
-    //fifo_count_Sensor_1 = Sensor_1.getFIFOCount();
-
-
-    /// Overflow Interrupt prüfen ///
-    /*
-    if(Sensor_1_Interrupt_Int_Status & 0x10) || fifo_count_Sensor_1 == 1024)
-    {
-        Sensor_1.resetFIFO();
-        //Serial.println("Warnung! FIFO overflow!");
-    }
-    */
-    
-    /// Data Available Interrupt prüfen ///
-    //if(Sensor_1_Interrupt_Int_Status & 0x02)                                                                                        // veroderung mit 0x02 damit if Bedingung ausgeführt wird
-    //{
-        // Warten bis genügend Daten im FIFO vorhanden
-        /*
-        while(fifo_count_Sensor_1 < packetSize)
-        {
-            fifo_count_Sensor_1 = Sensor_1.getFIFOCount();                                                                      // aktualisieren des aktuellen FIFO Counts Sensor 1
-        }
-    */
-
-                /// Abholen der Daten in Paketgröße ///
-        Sensor_1.dmpGetCurrentFIFOPacket(Data_Array_Sensor_1);
-        //Sensor_2.getFIFOBytes(Data_Array_Sensor_2,packetSize);
-
-        //fifo_count_Sensor_1 -= packetSize;                                                                                      // Rücksetzten des FIFO Counts um zu lesende Paketgröße
-
-
-
+     Sensor_1.dmpGetCurrentFIFOPacket(Data_Array_Sensor_1);
+    //Sensor_2.getFIFOBytes(Data_Array_Sensor_2,packetSize);
 
 
     #ifdef YAW_PITCH_ROLL
@@ -378,8 +331,8 @@ void loop()
         Serial.println("");
     #endif
 
-    /*
-    #ifdef EULER
+    
+    #ifdef EULER_VALUES
 
         Sensor_1.dmpGetQuaternion(&quaternion_Sensor_1,Data_Array_Sensor_1);
         //Sensor_2.dmpGetQuaternion(&quaternion_Sensor_2,Data_Array_Sensor_2);
@@ -395,7 +348,7 @@ void loop()
         Serial.println(euler_Sensor_1[2] * 180 / M_PI);
 
     #endif
-*/
+
 
     #ifdef Raw_ACCEL_GYRO
 
@@ -416,7 +369,7 @@ void loop()
 
 
 
-    //}
+
 
         delay(1000);
 
