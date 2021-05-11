@@ -42,9 +42,9 @@ MPU6050 secondMPUSensor(0x69);                                                  
 //################################################################//
 
 
-#define OUTPUT_READABLE_QUATERNION
+//#define OUTPUT_READABLE_QUATERNION
 //#define OUTPUT_READABLE_EULER
-//#define OUTPUT_READABLE_YAWPITCHROLL
+#define OUTPUT_READABLE_YAWPITCHROLL
 //#define OUTPUT_READABLE_REALACCEL
 //#define OUTPUT_READABLE_WORLDACCEL
 
@@ -205,8 +205,8 @@ void loop()
 
 #ifdef OUTPUT_READABLE_EULER
     // display Euler angles in degrees
-    mpu.dmpGetQuaternion(&q, fifoBuffer);
-    mpu.dmpGetEuler(euler, &q);
+    firstMPUSensor.dmpGetQuaternion(&firstQuaternion, fifoBuffer);
+    firstMPUSensor.dmpGetEuler(euler, &firstQuaternion); 
     Serial.print("euler\t");
     Serial.print(euler[0] * 180 / M_PI);
     Serial.print("\t");
@@ -217,9 +217,9 @@ void loop()
 
 #ifdef OUTPUT_READABLE_YAWPITCHROLL
     // display Euler angles in degrees
-    mpu.dmpGetQuaternion(&q, fifoBuffer);
-    mpu.dmpGetGravity(&gravity, &q);
-    mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+    firstMPUSensor.dmpGetQuaternion(&firstQuaternion, fifoBuffer);
+    firstMPUSensor.dmpGetGravity(&gravity, &firstQuaternion);
+    firstMPUSensor.dmpGetYawPitchRoll(ypr, &firstQuaternion, &gravity);
     Serial.print("ypr\t");
     Serial.print(ypr[0] * 180 / M_PI);
     Serial.print("\t");
