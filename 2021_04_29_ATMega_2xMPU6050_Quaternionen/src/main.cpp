@@ -1,3 +1,8 @@
+
+
+
+
+
 /* Titel: ATMega 2560 mit 2 MPU6050 
 *
 * Version: v1.0
@@ -189,7 +194,6 @@ void setup()
         Serial.println("Verbindung zum zweiten Sensor NICHT erfogreich");
     }
 
-    /*
     /// Serial Buffer leeren ///
     Serial.println("Send any character to begin DMP programming and demo: ");
     while (Serial.available() && Serial.read()) // empty buffer
@@ -204,7 +208,6 @@ void setup()
     {
         Serial.println("emtpy again");
     }
-*/
 
     /// Initialisieren der Sensor DMP ///
     Serial.println(F("Initalisieren der DMP..."));
@@ -233,15 +236,15 @@ void setup()
 
     }
 
-    /*
+    
     /// Offset setzen wir erst nach Filter Test ///
-    firstMPUSensor.setXGyroOffset(51);
-    firstMPUSensor.setYGyroOffset(8);
-    firstMPUSensor.setZGyroOffset(21);
-    firstMPUSensor.setXAccelOffset(1150);
-    firstMPUSensor.setYAccelOffset(-50);
-    firstMPUSensor.setZAccelOffset(1060);
-    */
+    Sensor_1.setXGyroOffset(51);
+    Sensor_1.setYGyroOffset(8);
+    Sensor_1.setZGyroOffset(21);
+    Sensor_1.setXAccelOffset(1150);
+    Sensor_1.setYAccelOffset(-50);
+    Sensor_1.setZAccelOffset(1060);
+    
 
     /// Kalibrierung wenn nötig ///
 
@@ -393,20 +396,21 @@ void loop()
 
     #endif
 */
+
     #ifdef Raw_ACCEL_GYRO
 
     Sensor_1.getMotion6(&Acc_x_Sensor_1,&Acc_y_Sensor_1,&Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
 
         //Serial.print("Acceleration:\t");
-        Serial.print(Acc_x_Sensor_1); Serial.print("\t");
-        Serial.print(Acc_y_Sensor_1); Serial.print("\t");
-        Serial.print(Acc_z_Sensor_1); Serial.print("\t");
-        Serial.println("");
+        //Serial.print(Acc_x_Sensor_1); Serial.print("\t");
+        //Serial.print(Acc_y_Sensor_1); Serial.print("\t");
+        //Serial.print(Acc_z_Sensor_1); Serial.print("\t");
+        //Serial.println("");
 
         //Serial.print("Gyro:\t");
-        //Serial.print(Gyro_x_Sensor_1); Serial.print("\t");
-        //Serial.print(Gyro_y_Sensor_1); Serial.print("\t");
-        //Serial.println(Gyro_z_Sensor_1);
+        Serial.print(Gyro_x_Sensor_1); Serial.print("\t");
+        Serial.print(Gyro_y_Sensor_1); Serial.print("\t");
+        Serial.println(Gyro_z_Sensor_1);
 
     #endif
 
