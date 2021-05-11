@@ -48,6 +48,12 @@ MPU6050 Sensor_2(MPU6050_ADDRESS_AD0_HIGH);                                     
 #define interruptPin_Sensor_1 18                                                                                       // Interrupt Pin für ATMega 2560 für Sensor 1
 #define interruptPin_Sensor_2 19                                                                                       // Interrupt Pin für ATMega 2560 für Sensor 2
 
+///// AUSGABE DEFINES /////
+
+//#define YAW_PITCH_ROLL
+//#define EULER
+#define Raw_ACCEL_GYRO
+
 
 //################################################################//
 //###################### globale Variablen #######################//
@@ -87,13 +93,21 @@ uint8_t Data_Array_Sensor_2[64];                                                
 
 
 ///// Beschleunigungswerte /////
-VectorInt16 Acc_Values_Sensor_1;                                                                                        // [x, y, z] Beschleunigungs Werte Sensor 1 - Cotr ohne Parameter setzt alle Werte auf 0
-VectorInt16 Acc_Values_Sensor_2;                                                                                        // [x, y, z] Beschleunigungs Werte Sensor 2 - Cotr ohne Parameter setzt alle Werte auf 0
+int16_t Acc_x_Sensor_1;                                                                                                   // X-Achsen Beschleunigungs Wert Sensor 1
+int16_t Acc_y_Sensor_1;                                                                                                   // Y-Achsen Beschleunigungs Wert Sensor 1
+int16_t Acc_z_Sensor_1;                                                                                                   // Z-Achsen Beschleunigungs Wert Sensor 1
+int16_t Acc_x_Sensor_2;                                                                                                   // X-Achsen Beschleunigungs Wert Sensor 2
+int16_t Acc_y_Sensor_2;                                                                                                   // Y-Achsen Beschleunigungs Wert Sensor 2
+int16_t Acc_z_Sensor_2;                                                                                                   // Z-Achsen Beschleunigungs Wert Sensor 2
 
 ///// Drehraten - Drehgeschwindigkeit /////
-VectorInt16 Gyro_Values_Sensor_1;                                                                                          // speichert die Drehraten / Drehgeschwindigkeit um alle 3 Achsen in Grad/sec von Sensor 1
-VectorInt16 Gyro_Values_Sensor_2;                                                                                          // speichert die Drehraten / Drehgeschwindigkeit um alle 3 Achsen in Grad/sec von Sensor 2
 
+int16_t Gyro_x_Sensor_1;                                                                                                   // X-Achsen Drehraten Wert Sensor 1
+int16_t Gyro_y_Sensor_1;                                                                                                   // Y-Achsen Drehraten Wert Sensor 1
+int16_t Gyro_z_Sensor_1;                                                                                                   // Z-Achsen Drehraten Wert Sensor 1
+int16_t Gyro_x_Sensor_2;                                                                                                   // X-Achsen Drehraten Wert Sensor 2
+int16_t Gyro_y_Sensor_2;                                                                                                   // Y-Achsen Drehraten Wert Sensor 2
+int16_t Gyro_z_Sensor_2;                                                                                                   // Z-Achsen Drehraten Wert Sensor 2
 
 ///// Quaternionen Objekte /////
 Quaternion quaternion_Sensor_1;                                                                                         // speichert Quaternionen Werte von Sensor 1 - Winkel und Drehachse in x, y, z Richtung                            
@@ -104,8 +118,10 @@ VectorFloat gravity_Sensor_1;                                                   
 VectorFloat gravity_Sensor_2;                                                                                           // Speichert Vektor der Richtung der Erdbeschleunigung
 
 ///// Gravity Vektor /////
-float yaw_pitch_roll_Sensor_1[3];                                                                                          // Speichert den jeweiligen Winkel zur x, y, z Achse - Sensor 1
-float yaw_pitch_roll_Sensor_2[3];                                                                                          // Speichert den jeweiligen Winkel zur x, y, z Achse - Sensor 2
+float yaw_pitch_roll_Sensor_1[3];                                                                                          // Speichert den jeweiligen Winkel zur z, y, x Achse - Sensor 1
+float yaw_pitch_roll_Sensor_2[3];                                                                                          // Speichert den jeweiligen Winkel zur z, y, x Achse - Sensor 2
+
+float euler_Sensor_1[3];                                                                                                // Speichert den jeweiligen Euler WInkel zur z,y,x Achse -Sensor 1
 
 
 //################################################################//
@@ -217,8 +233,8 @@ void setup()
 
     }
 
-
-    /* /// Offset setzen wir erst nach Filter Test ///
+    /*
+    /// Offset setzen wir erst nach Filter Test ///
     firstMPUSensor.setXGyroOffset(51);
     firstMPUSensor.setYGyroOffset(8);
     firstMPUSensor.setZGyroOffset(21);
@@ -263,11 +279,11 @@ void setup()
         Serial.print(devStatus2);
         Serial.println(F(")"));
     }
-    */
-
+    
+*/
 
     ///// Testausgabe Überschrift /////
-    Serial.println("z-Achse, y-Achse, x-Achse");
+    //Serial.println("z-Achse, y-Achse, x-Achse");
 
 
 }
@@ -328,11 +344,18 @@ void loop()
             fifo_count_Sensor_1 = Sensor_1.getFIFOCount();                                                                      // aktualisieren des aktuellen FIFO Counts Sensor 1
         }
     */
+
                 /// Abholen der Daten in Paketgröße ///
         Sensor_1.dmpGetCurrentFIFOPacket(Data_Array_Sensor_1);
         //Sensor_2.getFIFOBytes(Data_Array_Sensor_2,packetSize);
 
         //fifo_count_Sensor_1 -= packetSize;                                                                                      // Rücksetzten des FIFO Counts um zu lesende Paketgröße
+
+
+
+
+
+    #ifdef YAW_PITCH_ROLL
 
         Sensor_1.dmpGetQuaternion(&quaternion_Sensor_1,Data_Array_Sensor_1);
         //Sensor_2.dmpGetQuaternion(&quaternion_Sensor_2,Data_Array_Sensor_2);
@@ -343,13 +366,52 @@ void loop()
         Sensor_1.dmpGetYawPitchRoll(yaw_pitch_roll_Sensor_1,&quaternion_Sensor_1,&gravity_Sensor_1);
         //Sensor_2.dmpGetYawPitchRoll(yaw_pitch_roll_Sensor_2,&quaternion_Sensor_2,&gravity_Sensor_2);
 
-        /// Serielle Ausgabe ///
+        Serial.print("yaw-pitch-roll\t");
         Serial.print(yaw_pitch_roll_Sensor_1[0] * 180 / M_PI);
         Serial.print(", ");
         Serial.print(yaw_pitch_roll_Sensor_1[1] * 180 / M_PI);
         Serial.print(", ");
         Serial.print(yaw_pitch_roll_Sensor_1[2] * 180 / M_PI);
         Serial.println("");
+    #endif
+
+    /*
+    #ifdef EULER
+
+        Sensor_1.dmpGetQuaternion(&quaternion_Sensor_1,Data_Array_Sensor_1);
+        //Sensor_2.dmpGetQuaternion(&quaternion_Sensor_2,Data_Array_Sensor_2);
+
+        Sensor_1.dmpGetEuler(euler_Sensor_1,&quaternion_Sensor_1);
+    
+        /// Serielle Ausgabe Euler ///
+        Serial.print("euler\t");
+        Serial.print(euler_Sensor_1[0] * 180 / M_PI);
+        Serial.print("\t");
+        Serial.print(euler_Sensor_1[1] * 180 / M_PI);
+        Serial.print("\t");
+        Serial.println(euler_Sensor_1[2] * 180 / M_PI);
+
+    #endif
+*/
+    #ifdef Raw_ACCEL_GYRO
+
+    Sensor_1.getMotion6(&Acc_x_Sensor_1,&Acc_y_Sensor_1,&Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
+
+        //Serial.print("Acceleration:\t");
+        Serial.print(Acc_x_Sensor_1); Serial.print("\t");
+        Serial.print(Acc_y_Sensor_1); Serial.print("\t");
+        Serial.print(Acc_z_Sensor_1); Serial.print("\t");
+        Serial.println("");
+
+        //Serial.print("Gyro:\t");
+        //Serial.print(Gyro_x_Sensor_1); Serial.print("\t");
+        //Serial.print(Gyro_y_Sensor_1); Serial.print("\t");
+        //Serial.println(Gyro_z_Sensor_1);
+
+    #endif
+
+
+
     //}
 
         delay(1000);
