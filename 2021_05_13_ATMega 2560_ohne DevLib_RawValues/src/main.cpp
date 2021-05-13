@@ -116,7 +116,7 @@ void setup()
   }
 
   Serial.println("");
-  delay(10000);
+  delay(1000);
 
 }
 

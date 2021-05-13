@@ -109,8 +109,8 @@ void setup()
   devStatus = firstMPUSensor.dmpInitialize();
   devStatus = secondMPUSensor.dmpInitialize();
 
-  // supply your own gyro offsets here, scaled for min sensitivity
-  firstMPUSensor.setXGyroOffset(51);
+  // supply your own gyro offsets here, scaled for min sensitivity                  // Eintragung hat Faktor 10
+  firstMPUSensor.setXGyroOffset(51);                                                  
   firstMPUSensor.setYGyroOffset(8);
   firstMPUSensor.setZGyroOffset(21);
   firstMPUSensor.setXAccelOffset(1150);
