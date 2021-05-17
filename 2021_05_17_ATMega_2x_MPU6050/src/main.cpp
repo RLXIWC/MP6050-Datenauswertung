@@ -260,8 +260,8 @@ void setup()
     if(DMP_Status_Int_Sensor_1 == 0)
     {
     
-        Sensor_1.CalibrateAccel(6);                                                                                              // Starten des PID Reglers
-        Sensor_1.CalibrateGyro(6);
+        Sensor_1.CalibrateAccel(15);                                                                                              // Starten des PID Reglers
+        Sensor_1.CalibrateGyro(15);
         Serial.println();
         Sensor_1.PrintActiveOffsets();                                                                                           // Zeige ermittelte Offset Werte
 
@@ -289,8 +289,8 @@ void setup()
 
     if(DMP_Status_Int_Sensor_2 == 0)
     {
-        Sensor_2.CalibrateAccel(6);                                                                                              // Starten des PID Reglers
-        Sensor_2.CalibrateGyro(6);
+        Sensor_2.CalibrateAccel(15);                                                                                              // Starten des PID Reglers
+        Sensor_2.CalibrateGyro(15);
         Serial.println();
         Sensor_2.PrintActiveOffsets();                                                                                           // Zeige ermittelte Offset Werte
 
@@ -381,6 +381,21 @@ void loop()
 
         float euler_ergebnis[3];
         Sensor_1.dmpGetEuler(euler_ergebnis,&product_quaternion);                                                                               // Speichern der Eulerwinkel in eine lokale Variable (ob Sensor_1 oder Sensor_2 genutzt wird spielt keine Rolle)
+        Sensor_1.dmpGetEuler(euler_Sensor_1, &quaternion_Sensor_1);
+        Sensor_2.dmpGetEuler(euler_Sensor_2, &quaternion_Sensor_2);        
+
+
+        Serial.print(euler_Sensor_1[0] * 180 / M_PI);
+        Serial.print("\t");
+        Serial.print(euler_Sensor_1[1] * 180 / M_PI);
+        Serial.print("\t");
+        Serial.println(euler_Sensor_1[2] * 180 / M_PI);
+
+        Serial.print(euler_Sensor_2[0] * 180 / M_PI);
+        Serial.print("\t");
+        Serial.print(euler_Sensor_2[1] * 180 / M_PI);
+        Serial.print("\t");
+        Serial.println(euler_Sensor_2[2] * 180 / M_PI);
 
         /// Serielle Ausgabe Euler ///
         Serial.print(euler_ergebnis[0] * 180 / M_PI);
@@ -388,6 +403,9 @@ void loop()
         Serial.print(euler_ergebnis[1] * 180 / M_PI);
         Serial.print("\t");
         Serial.println(euler_ergebnis[2] * 180 / M_PI);
+
+        Serial.println("---------");
+        Serial.println();
 
     #endif
 
