@@ -1,0 +1,60 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
+{
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "C:/Users/Heiko/Documents/MPU6050 Dautenauswertung/MP6050-Datenauswertung/2021_05_17_ATMega_2x_MPU6050/include",
+                "C:/Users/Heiko/Documents/MPU6050 Dautenauswertung/MP6050-Datenauswertung/2021_05_17_ATMega_2x_MPU6050/src",
+                "C:/Users/Heiko/Documents/MPU6050 Dautenauswertung/MP6050-Datenauswertung/2021_05_17_ATMega_2x_MPU6050/.pio/libdeps/megaatmega2560/I2Cdevlib-MPU6050",
+                "C:/Users/Heiko/Documents/MPU6050 Dautenauswertung/MP6050-Datenauswertung/2021_05_17_ATMega_2x_MPU6050/.pio/libdeps/megaatmega2560/I2Cdevlib-Core",
+                "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/cores/arduino",
+                "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/variants/mega",
+                "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "C:/Users/Heiko/Documents/MPU6050 Dautenauswertung/MP6050-Datenauswertung/2021_05_17_ATMega_2x_MPU6050/include",
+                    "C:/Users/Heiko/Documents/MPU6050 Dautenauswertung/MP6050-Datenauswertung/2021_05_17_ATMega_2x_MPU6050/src",
+                    "C:/Users/Heiko/Documents/MPU6050 Dautenauswertung/MP6050-Datenauswertung/2021_05_17_ATMega_2x_MPU6050/.pio/libdeps/megaatmega2560/I2Cdevlib-MPU6050",
+                    "C:/Users/Heiko/Documents/MPU6050 Dautenauswertung/MP6050-Datenauswertung/2021_05_17_ATMega_2x_MPU6050/.pio/libdeps/megaatmega2560/I2Cdevlib-Core",
+                    "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                    "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/cores/arduino",
+                    "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/variants/mega",
+                    "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                    "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                    "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                    "C:/Users/Heiko/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                    ""
+                ]
+            },
+            "defines": [
+                "PLATFORMIO=50101",
+                "ARDUINO_AVR_MEGA2560",
+                "F_CPU=16000000L",
+                "ARDUINO_ARCH_AVR",
+                "ARDUINO=10808",
+                "__AVR_ATmega2560__",
+                ""
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "compilerPath": "C:/Users/Heiko/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
+            "compilerArgs": [
+                "-mmcu=atmega2560",
+                ""
+            ]
+        }
+    ],
+    "version": 4
+}
