@@ -51,18 +51,13 @@ MPU6050 Sensor_2(MPU6050_ADDRESS_AD0_HIGH);                                     
 ///// AUSGABE DEFINES /////
 
 //#define YAW_PITCH_ROLL
-//#define EULER_VALUES
-#define Raw_ACCEL_GYRO
+#define EULER_VALUES
+//#define Raw_ACCEL_GYRO
 
 
 //################################################################//
 //###################### globale Variablen #######################//
 //################################################################//
-
-///// DMP Status /////
-uint8_t dmpStatus;                                                                                                  // Status des DMP als Wert
-bool dmpReady = false;                                                                                              // Status des DMP als Boolean
-
 
 ///// aktuelle FIFO Groesse /////
 
@@ -85,7 +80,8 @@ uint8_t DMP_Status_Int_Sensor_1;                                                
 uint8_t DMP_Status_Int_Sensor_2;                                                                                     // Status des DMP als Wert Sensor 2
 
 ///// Paketgröße zum FIFO lesen ////
-uint16_t packetSize;                                                                                                // wird im Initialize auf 28 Byte festgelegt (16 Byte für Quaternionen, 6 Acc, 6 Gyro)
+uint16_t packetSize_Sensor_1;                                                                                         // wird im Initialize auf 28 Byte festgelegt (16 Byte für Quaternionen, 6 Acc, 6 Gyro)
+uint16_t packetSize_Sensor_2;                                                                                         // wird im Initialize auf 28 Byte festgelegt (16 Byte für Quaternionen, 6 Acc, 6 Gyro)
 
 ///// Data Array aus FIFO /////
 uint8_t Data_Array_Sensor_1[64];                                                                                    // hier werden die Bytes aus dem FIFO von Sensor 1 eingelesen (kommen als Hex Werte an)                                                                                  
@@ -109,6 +105,14 @@ int16_t Gyro_x_Sensor_2;                                                        
 int16_t Gyro_y_Sensor_2;                                                                                                   // Y-Achsen Drehraten Wert Sensor 2
 int16_t Gyro_z_Sensor_2;                                                                                                   // Z-Achsen Drehraten Wert Sensor 2
 
+///// Variablen für Mittelwert /////
+int16_t Acc_x_mean;                                                                                                    // X-Achsen Beschleunigungs Mittelwert
+int16_t Acc_y_mean;                                                                                                    // Y-Achsen Beschleunigungs Mittelwert
+int16_t Acc_z_mean;                                                                                                    // Z-Achsen Beschleunigungs Mittelwert
+int16_t Gyro_x_mean;                                                                                                    // X-Achsen Drehraten Mittelwert
+int16_t Gyro_y_mean;                                                                                                    // Y-Achsen Drehraten Mittelwert
+int16_t Gyro_z_mean;                                                                                                    // Z-Achsen Drehraten Mittelwert
+
 ///// Quaternionen Objekte /////
 Quaternion quaternion_Sensor_1;                                                                                         // speichert Quaternionen Werte von Sensor 1 - Winkel und Drehachse in x, y, z Richtung                            
 Quaternion quaternion_Sensor_2;                                                                                         // speichert Quaternionen Werte von Sensor 2 - Winkel und Drehachse in x, y, z Richtung                            
@@ -122,16 +126,12 @@ float yaw_pitch_roll_Sensor_1[3];                                               
 float yaw_pitch_roll_Sensor_2[3];                                                                                          // Speichert den jeweiligen Winkel zur z, y, x Achse - Sensor 2
 
 float euler_Sensor_1[3];                                                                                                // Speichert den jeweiligen Euler WInkel zur z,y,x Achse -Sensor 1
-
+float euler_Sensor_2[3];                                                                                                // Speichert den jeweiligen Euler WInkel zur z,y,x Achse -Sensor 2
 
 //################################################################//
 //######################### Functions ############################//
 //################################################################//
 
-void HextoDezimal(int *Dezimal_output, const char* Hex_input) 
-{
-
-}
 
 void Data_Available_ISR_Sensor_1()
 {
@@ -144,6 +144,22 @@ void Data_Available_ISR_Sensor_1()
 void Data_Available_ISR_Sensor_2()
 {
     Sensor_2_Interrupt_Bool_Status = true;                                                                                              // Interrupt Flag setzten für Sensor 2
+}
+
+
+////////////////////////
+////// Mittelwert //////
+////////////////////////
+void calculate_Mean_Value()
+{
+    Acc_x_mean = (Acc_x_Sensor_1 + Acc_x_Sensor_2)/2;
+    Acc_y_mean = (Acc_y_Sensor_1 + Acc_y_Sensor_2)/2;
+    Acc_z_mean = (Acc_z_Sensor_1 + Acc_z_Sensor_2)/2;
+
+    Gyro_x_mean = (Gyro_x_Sensor_1 + Gyro_x_Sensor_2)/2;
+    Gyro_y_mean = (Gyro_y_Sensor_1 + Gyro_y_Sensor_2)/2;
+    Gyro_z_mean = (Gyro_z_Sensor_1 + Gyro_z_Sensor_2)/2;
+
 }
 
 
@@ -165,7 +181,7 @@ void setup()
     /// Sensoren aktivieren ///
     Serial.println("Initalisieren der Sensoren ueber I2C ....");
     Sensor_1.initialize();                                                                                              // legt fest: clock Quelle für die Gyro -> Winkel Berechnung  // MPU sleep deaktivieren // g Range auf +- 2g // Gyro Range auf +# 250° / sec
-    //Sensor_2.initialize();
+    Sensor_2.initialize();
 
 
     /// Verbingungstest Sensor 1 ///
@@ -204,86 +220,112 @@ void setup()
         Serial.println("emtpy again");
     }
 
-    /// Initialisieren der Sensor DMP ///
+    /////////////////////////////////////////////
+    /////// Initialisieren der Sensor DMP ///////
+    /////////////////////////////////////////////
+
     Serial.println(F("Initalisieren der DMP..."));
     DMP_Status_Int_Sensor_1 = Sensor_1.dmpInitialize();                                                                      // wenn funktioniert wird Status = 0   // beschreiben der DMP Register Sensor 1 // Gyro Range wird auf +- 2000 °/sec gesetzt // FIFO Data available interrupt wird aktiviert
-    //DMP_Status_Int_Sensor_2 = Sensor_2.dmpInitialize();                                                                      // wenn funktioniert wird Status = 0   // beschreiben der DMP Register Sensor 2 // Gyro Range wird auf +- 2000 °/sec gesetzt // FIFO Data available interrupt wird aktiviert
+    DMP_Status_Int_Sensor_2 = Sensor_2.dmpInitialize();                                                                      // wenn funktioniert wird Status = 0   // beschreiben der DMP Register Sensor 2 // Gyro Range wird auf +- 2000 °/sec gesetzt // FIFO Data available interrupt wird aktiviert
 
-    if(DMP_Status_Int_Sensor_1 == 0)
-    {
-        /// Interrupts ///
-        Sensor_1.setDMPEnabled(true);                                                                                         // Interrupts enablen Sensor 1
-        //Sensor_2.setDMPEnabled(true);                                                                                         // Interrupts enablen Sensor 2
 
-        //attachInterrupt(2, Data_Available_ISR_Sensor_1,RISING);                                                               // Interrupt Routine zuwesien Sensor 1 - Pin 18
-        //attachInterrupt(4, Data_Available_ISR_Sensor_2,RISING);                                                               // Interrupt Routine zuwesien Sensor 2 - Pin 19
-
-        dmpReady = true;
-
-        /// Abfragen der Paketgröße //
-        packetSize = Sensor_1.dmpGetFIFOPacketSize();                                                                         // PacketSize einspeichern, die wir in der Initialize festgelegt haben 
+    /////////////////////////////////////////////
+    ////////////// Set Offsets //////////////////
+    /////////////////////////////////////////////
     
-        Serial.println("DMP Sensor 1 Initializing Succeeded");
-    }
-    else
-    {
-        Serial.println("Initializing failed -> press RESET");
-
-    }
-
-    
-    /// Offset setzen wir erst nach Filter Test ///
+    /////////////////////
+    /////  Sensor 1 /////
+    /////////////////////
     Sensor_1.setXGyroOffset(51);
     Sensor_1.setYGyroOffset(8);
     Sensor_1.setZGyroOffset(21);
     Sensor_1.setXAccelOffset(1150);
     Sensor_1.setYAccelOffset(-50);
     Sensor_1.setZAccelOffset(1060);
-    
 
-    /// Kalibrierung wenn nötig ///
+    /////////////////////
+    /////  Sensor 2 /////
+    /////////////////////
+    Sensor_2.setXGyroOffset(51);
+    Sensor_2.setYGyroOffset(8);
+    Sensor_2.setZGyroOffset(21);
+    Sensor_2.setXAccelOffset(1150);
+    Sensor_2.setYAccelOffset(-50);
+    Sensor_2.setZAccelOffset(1060);
 
-    /*
-    if (devStatus == 0 || devStatus2 == 0)
+    ////////////////////////////////////////////
+    ///// Sensor 1 PID Regler Kalibrierung /////
+    ////////////////////////////////////////////
+
+    if(DMP_Status_Int_Sensor_1 == 0)
     {
-        // Calibration Time: generate offsets and calibrate our MPU6050
-        firstMPUSensor.CalibrateAccel(6);
-        firstMPUSensor.CalibrateGyro(6);
-        secondMPUSensor.CalibrateAccel(6);
-        secondMPUSensor.CalibrateGyro(6);
+    
+        Sensor_1.CalibrateAccel(6);                                                                                              // Starten des PID Reglers
+        Sensor_1.CalibrateGyro(6);
         Serial.println();
-        firstMPUSensor.PrintActiveOffsets();
-        // turn on the DMP, now that it's ready
-        Serial.println(F("Enabling DMP..."));
-        firstMPUSensor.setDMPEnabled(true);
-        secondMPUSensor.setDMPEnabled(true);
+        Sensor_1.PrintActiveOffsets();                                                                                           // Zeige ermittelte Offset Werte
 
-        dmpReady = true;
+        /// Interrupt ///
+        Sensor_1.setDMPEnabled(true);                                                                                            // Interrupts enablen Sensor 1
+        //Serial.print(digitalPinToInterrupt(INTERRUPT_PIN));
+        //attachInterrupt(2, Data_Available_ISR_Sensor_1,RISING);                                                               // Interrupt Routine zuwesien Sensor 1 - Pin 18
 
-        // get expected DMP packet size for later comparison
-        packetSize = firstMPUSensor.dmpGetFIFOPacketSize();
-        packetSize2 = secondMPUSensor.dmpGetFIFOPacketSize();
+        DMP_Status_Bool_Sensor_1 = true;                                                                                        // alles geklappt -> setze DMP Status auf True
+
+        /// Abfragen der Paketgröße //
+        packetSize_Sensor_1 = Sensor_1.dmpGetFIFOPacketSize();                                                                         // PacketSize einspeichern, die wir in der Initialize festgelegt haben 
+    
+        Serial.println("DMP Sensor 1 Initializing Succeeded");
     }
     else
     {
-    // ERROR!
-        // 1 = initial memory load failed
-        // 2 = DMP configuration updates failed
-        // (if it's going to break, usually the code will be 1)
-        Serial.print(F("DMP 1 Initialization failed (code "));
-        Serial.print(devStatus);
-        Serial.println(F(")"));
-        Serial.print(F("DMP 2 Initialization failed (code "));
-        Serial.print(devStatus2);
-        Serial.println(F(")"));
+        Serial.println("Initializing DMP Sensor 1 failed -> press RESET");
+
     }
+
+    ////////////////////////////////////////////
+    ///// Sensor 2 PID Regler Kalibrierung /////
+    ////////////////////////////////////////////
+
+    if(DMP_Status_Int_Sensor_2 == 0)
+    {
+        Sensor_2.CalibrateAccel(6);                                                                                              // Starten des PID Reglers
+        Sensor_2.CalibrateGyro(6);
+        Serial.println();
+        Sensor_2.PrintActiveOffsets();                                                                                           // Zeige ermittelte Offset Werte
+
+        /// Interrupt ///
+        Sensor_2.setDMPEnabled(true);                                                                                            // Interrupts enablen Sensor 1
+        //Serial.print(digitalPinToInterrupt(INTERRUPT_PIN));
+        //attachInterrupt(2, Data_Available_ISR_Sensor_1,RISING);                                                               // Interrupt Routine zuwesien Sensor 1 - Pin 18
+
+        DMP_Status_Bool_Sensor_2 = true;                                                                                        // alles geklappt -> setze DMP Status auf True
+
+        /// Abfragen der Paketgröße //
+        packetSize_Sensor_2 = Sensor_2.dmpGetFIFOPacketSize();                                                                         // PacketSize einspeichern, die wir in der Initialize festgelegt haben 
     
-*/
+        Serial.println("DMP Sensor 2 Initializing Succeeded");
+    }
+    else
+    {
+        Serial.println("Initializing DMP Sensor 2 failed -> press RESET");
 
-    ///// Testausgabe Überschrift /////
-    //Serial.println("z-Achse, y-Achse, x-Achse");
+    }
 
 
+    ///////////////////////////////////////
+    /////////// Startausgaben /////////////
+    ///////////////////////////////////////
+    #ifdef Raw_ACCEL_GYRO
+        ///// Testausgabe Überschrift /////
+        Serial.print("Acceleration Values: x-Achse, y-Achse, z-Achse\t");
+        Serial.println("Gyro Values: x-Achse, y-Achse, z-Achse");
+    #endif
+
+    #ifdef EULER_VALUES
+        ///// Testausgabe Überschrift /////
+        Serial.println("Winkel in: z-Achse, y-Achse, x-Achse");
+    #endif
 }
 
 //################################################################//
@@ -292,18 +334,20 @@ void setup()
 
 void loop()
 {
-    if(!dmpReady)                                                                                              // Initialize nicht funktioniert -> kein Start 
+    if(!DMP_Status_Bool_Sensor_1 || !DMP_Status_Bool_Sensor_2)                                                                                              // Initialize nicht funktioniert -> kein Start 
     {
-        Serial.print("DMP Stauts failed -> return im Loop");
+        Serial.print("DMP Status failed -> return im Loop");
         return;                                 
     }
     
 
 
-    /// Abholen der Daten in Paketgröße ///
+    /////////////////////////////////////////////
+    ///////////////// Get Data //////////////////
+    /////////////////////////////////////////////
 
-     Sensor_1.dmpGetCurrentFIFOPacket(Data_Array_Sensor_1);
-    //Sensor_2.getFIFOBytes(Data_Array_Sensor_2,packetSize);
+    Sensor_1.dmpGetCurrentFIFOPacket(Data_Array_Sensor_1);                                                                                     // get Current FIFO Packet holt autpmatisch die richtige packetsize
+    Sensor_2.dmpGetCurrentFIFOPacket(Data_Array_Sensor_2);
 
 
     #ifdef YAW_PITCH_ROLL
@@ -330,17 +374,20 @@ void loop()
     #ifdef EULER_VALUES
 
         Sensor_1.dmpGetQuaternion(&quaternion_Sensor_1,Data_Array_Sensor_1);
-        //Sensor_2.dmpGetQuaternion(&quaternion_Sensor_2,Data_Array_Sensor_2);
+        Sensor_2.dmpGetQuaternion(&quaternion_Sensor_2,Data_Array_Sensor_2);
 
-        Sensor_1.dmpGetEuler(euler_Sensor_1,&quaternion_Sensor_1);
-    
+        Quaternion product_quaternion;                                                                                                          // lokales Quaternionen zum Speichern des Produkt Ergebnisses
+        product_quaternion = quaternion_Sensor_1.getProduct(quaternion_Sensor_2);                                                               // Multiplikation von Quaternion aus Sensor 1 und Sensor 2 (Methode wirs aus der Quaternion 1 Klasse aufgerufen)
+
+        float euler_ergebnis[3];
+        Sensor_1.dmpGetEuler(euler_ergebnis,&product_quaternion);                                                                               // Speichern der Eulerwinkel in eine lokale Variable (ob Sensor_1 oder Sensor_2 genutzt wird spielt keine Rolle)
+
         /// Serielle Ausgabe Euler ///
-        Serial.print("euler\t");
-        Serial.print(euler_Sensor_1[0] * 180 / M_PI);
+        Serial.print(euler_ergebnis[0] * 180 / M_PI);
         Serial.print("\t");
-        Serial.print(euler_Sensor_1[1] * 180 / M_PI);
+        Serial.print(euler_ergebnis[1] * 180 / M_PI);
         Serial.print("\t");
-        Serial.println(euler_Sensor_1[2] * 180 / M_PI);
+        Serial.println(euler_ergebnis[2] * 180 / M_PI);
 
     #endif
 
@@ -348,25 +395,24 @@ void loop()
     #ifdef Raw_ACCEL_GYRO
 
     Sensor_1.getMotion6(&Acc_x_Sensor_1,&Acc_y_Sensor_1,&Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
+    Sensor_2.getMotion6(&Acc_x_Sensor_2,&Acc_y_Sensor_2,&Acc_z_Sensor_2, &Gyro_x_Sensor_2, &Gyro_y_Sensor_2, &Gyro_z_Sensor_2);
 
-        //Serial.print("Acceleration:\t");
-        //Serial.print(Acc_x_Sensor_1); Serial.print("\t");
-        //Serial.print(Acc_y_Sensor_1); Serial.print("\t");
-        //Serial.print(Acc_z_Sensor_1); Serial.print("\t");
-        //Serial.println("");
 
-        //Serial.print("Gyro:\t");
-        Serial.print(Gyro_x_Sensor_1); Serial.print("\t");
-        Serial.print(Gyro_y_Sensor_1); Serial.print("\t");
-        Serial.println(Gyro_z_Sensor_1);
+    calculate_Mean_Value();
+
+    Serial.print(Acc_x_mean); Serial.print("\t");
+    Serial.print(Acc_y_mean); Serial.print("\t");
+    Serial.print(Acc_z_mean); Serial.print("\t");
+
+
+    Serial.print(Gyro_x_mean); Serial.print("\t");
+    Serial.print(Gyro_y_mean); Serial.print("\t");
+    Serial.println(Gyro_z_mean);
 
     #endif
 
 
-
-
-
-        delay(1000);
+    delay(1000);                                                                                                                                // Sekündliche Prints
 
 
 }
