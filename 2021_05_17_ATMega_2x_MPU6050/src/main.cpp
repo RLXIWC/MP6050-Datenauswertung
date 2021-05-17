@@ -1,13 +1,8 @@
-
-
-
-
-
 /* Titel: ATMega 2560 mit 2 MPU6050 
 *
 * Version: v1.0
 * Autor: Jeremy und Heiko
-* Datum: 29.04.2021
+* Datum: 17.05.2021
 *
 * Kurze Beschreibung:
 * Auslesen beider Sensoren und abspeichern als Quaternionen
