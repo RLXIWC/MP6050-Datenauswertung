@@ -162,6 +162,16 @@ void calculate_Mean_Value()
 
 }
 
+/////////////////////////////////////
+////// Mittelwert Euler Winkel //////
+////////////////////////////////////
+void calculate_Mean_Value_Euler(float *meanEuler, float *euler1, float *euler2)
+{
+meanEuler[0] = (euler1[0] + euler2[0]) / 2;
+meanEuler[1] = (euler1[1] + euler2[1]) / 2;
+meanEuler[2] = (euler1[2] + euler2[2]) / 2;
+}
+
 
 //################################################################//
 //########################### SETUP ##############################//
@@ -236,22 +246,22 @@ void setup()
     /////////////////////
     /////  Sensor 1 /////
     /////////////////////
-    Sensor_1.setXGyroOffset(51);
-    Sensor_1.setYGyroOffset(8);
-    Sensor_1.setZGyroOffset(21);
-    Sensor_1.setXAccelOffset(1150);
-    Sensor_1.setYAccelOffset(-50);
-    Sensor_1.setZAccelOffset(1060);
+    // Sensor_1.setXGyroOffset(106);
+    // Sensor_1.setYGyroOffset(-2);
+    // Sensor_1.setZGyroOffset(16);
+    // Sensor_1.setXAccelOffset(-1816);
+    // Sensor_1.setYAccelOffset(-3695);
+    // Sensor_1.setZAccelOffset(5060);
 
     /////////////////////
     /////  Sensor 2 /////
     /////////////////////
-    Sensor_2.setXGyroOffset(51);
-    Sensor_2.setYGyroOffset(8);
-    Sensor_2.setZGyroOffset(21);
-    Sensor_2.setXAccelOffset(1150);
-    Sensor_2.setYAccelOffset(-50);
-    Sensor_2.setZAccelOffset(1060);
+    // Sensor_2.setXGyroOffset(280);
+    // Sensor_2.setYGyroOffset(-32);
+    // Sensor_2.setZGyroOffset(51);
+    // Sensor_2.setXAccelOffset(-4972);
+    // Sensor_2.setYAccelOffset(-1219);
+    // Sensor_2.setZAccelOffset(1120);
 
     ////////////////////////////////////////////
     ///// Sensor 1 PID Regler Kalibrierung /////
@@ -376,26 +386,32 @@ void loop()
         Sensor_1.dmpGetQuaternion(&quaternion_Sensor_1,Data_Array_Sensor_1);
         Sensor_2.dmpGetQuaternion(&quaternion_Sensor_2,Data_Array_Sensor_2);
 
-        Quaternion product_quaternion;                                                                                                          // lokales Quaternionen zum Speichern des Produkt Ergebnisses
-        product_quaternion = quaternion_Sensor_1.getProduct(quaternion_Sensor_2);                                                               // Multiplikation von Quaternion aus Sensor 1 und Sensor 2 (Methode wirs aus der Quaternion 1 Klasse aufgerufen)
+        // Quaternion product_quaternion;                                                                                                          // lokales Quaternionen zum Speichern des Produkt Ergebnisses
+        //product_quaternion = quaternion_Sensor_1.getProduct(quaternion_Sensor_2);                                                               // Multiplikation von Quaternion aus Sensor 1 und Sensor 2 (Methode wirs aus der Quaternion 1 Klasse aufgerufen)
 
-        float euler_ergebnis[3];
-        Sensor_1.dmpGetEuler(euler_ergebnis,&product_quaternion);                                                                               // Speichern der Eulerwinkel in eine lokale Variable (ob Sensor_1 oder Sensor_2 genutzt wird spielt keine Rolle)
+        // float euler_ergebnis[3];
+        // Sensor_1.dmpGetEuler(euler_ergebnis,&product_quaternion);                                                                               // Speichern der Eulerwinkel in eine lokale Variable (ob Sensor_1 oder Sensor_2 genutzt wird spielt keine Rolle)
         Sensor_1.dmpGetEuler(euler_Sensor_1, &quaternion_Sensor_1);
         Sensor_2.dmpGetEuler(euler_Sensor_2, &quaternion_Sensor_2);        
+
+        float euler_ergebnis[3];
+    
+        calculate_Mean_Value_Euler(euler_ergebnis,euler_Sensor_1,euler_Sensor_2);
 
 
         Serial.print(euler_Sensor_1[0] * 180 / M_PI);
         Serial.print("\t");
         Serial.print(euler_Sensor_1[1] * 180 / M_PI);
         Serial.print("\t");
-        Serial.println(euler_Sensor_1[2] * 180 / M_PI);
+        Serial.print(euler_Sensor_1[2] * 180 / M_PI);
+        Serial.print("\t");
 
         Serial.print(euler_Sensor_2[0] * 180 / M_PI);
         Serial.print("\t");
         Serial.print(euler_Sensor_2[1] * 180 / M_PI);
         Serial.print("\t");
-        Serial.println(euler_Sensor_2[2] * 180 / M_PI);
+        Serial.print(euler_Sensor_2[2] * 180 / M_PI);
+        Serial.print("\t");
 
         /// Serielle Ausgabe Euler ///
         Serial.print(euler_ergebnis[0] * 180 / M_PI);
@@ -404,8 +420,6 @@ void loop()
         Serial.print("\t");
         Serial.println(euler_ergebnis[2] * 180 / M_PI);
 
-        Serial.println("---------");
-        Serial.println();
 
     #endif
 
@@ -430,7 +444,7 @@ void loop()
     #endif
 
 
-    delay(1000);                                                                                                                                // Sekündliche Prints
+    //delay(1000);                                                                                                                                // Sekündliche Prints
 
 
 }

@@ -220,7 +220,7 @@ void loop() {
     lastTimeAcc = millis();
   }
 
-  //if((millis() - generalTime)>1000)
+  if((millis() - generalTime)>1000)
   {
     Serial.print(accX);
     Serial.print("\t");
