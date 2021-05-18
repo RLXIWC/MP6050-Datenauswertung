@@ -129,6 +129,8 @@ float yaw_pitch_roll_Sensor_2[3];                                               
 float euler_Sensor_1[3];                                                                                                // Speichert den jeweiligen Euler WInkel zur z,y,x Achse -Sensor 1
 float euler_Sensor_2[3];                                                                                                // Speichert den jeweiligen Euler WInkel zur z,y,x Achse -Sensor 2
 
+long i=0;
+
 //################################################################//
 //######################### Functions ############################//
 //################################################################//
@@ -362,6 +364,12 @@ void loop()
     Sensor_1.dmpGetCurrentFIFOPacket(Data_Array_Sensor_1);                                                                                     // get Current FIFO Packet holt autpmatisch die richtige packetsize
     Sensor_2.dmpGetCurrentFIFOPacket(Data_Array_Sensor_2);
 
+
+    Serial.print(i);
+    Serial.print(millis());
+
+
+
     /////////////////////////////////////////////
     //////////////// Quaternionen ///////////////
     /////////////////////////////////////////////
@@ -491,6 +499,6 @@ void loop()
 
 
     //delay(1000);                                                                                                                                // Sekündliche Prints
-
+    i++;
 
 }
