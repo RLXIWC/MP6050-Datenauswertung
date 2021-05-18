@@ -50,9 +50,10 @@ MPU6050 Sensor_2(MPU6050_ADDRESS_AD0_HIGH);                                     
 
 ///// AUSGABE DEFINES /////
 
+#define QUATERNION_VALUES
 //#define YAW_PITCH_ROLL
 #define EULER_VALUES
-//#define Raw_ACCEL_GYRO
+#define Raw_ACCEL_GYRO
 
 
 //################################################################//
@@ -336,6 +337,8 @@ void setup()
         ///// Testausgabe Überschrift /////
         Serial.println("Winkel in: z-Achse, y-Achse, x-Achse");
     #endif
+
+    delay(10000);                                                                                                                                       // Start abwarten bis eingependelt nach Kalibrierung
 }
 
 //################################################################//
@@ -359,7 +362,37 @@ void loop()
     Sensor_1.dmpGetCurrentFIFOPacket(Data_Array_Sensor_1);                                                                                     // get Current FIFO Packet holt autpmatisch die richtige packetsize
     Sensor_2.dmpGetCurrentFIFOPacket(Data_Array_Sensor_2);
 
+    /////////////////////////////////////////////
+    //////////////// Quaternionen ///////////////
+    /////////////////////////////////////////////
+    #ifdef QUATERNION_VALUES
+    Sensor_1.dmpGetQuaternion(&quaternion_Sensor_1,Data_Array_Sensor_1);
+    Sensor_2.dmpGetQuaternion(&quaternion_Sensor_2,Data_Array_Sensor_2);
 
+    Serial.print(quaternion_Sensor_1.w);
+    Serial.print("\t");
+    Serial.print(quaternion_Sensor_1.x);
+    Serial.print("\t");
+    Serial.print(quaternion_Sensor_1.y);
+    Serial.print("\t");
+    Serial.print(quaternion_Sensor_1.z);
+    Serial.print("\t");
+
+    Serial.print(quaternion_Sensor_2.w);
+    Serial.print("\t");
+    Serial.print(quaternion_Sensor_2.x);
+    Serial.print("\t");
+    Serial.print(quaternion_Sensor_2.y);
+    Serial.print("\t");
+    Serial.print(quaternion_Sensor_2.z);
+    Serial.print("\t");
+
+    #endif
+
+    
+    /////////////////////////////////////////////
+    ////////////// Yaw Pitch Roll ///////////////
+    /////////////////////////////////////////////
     #ifdef YAW_PITCH_ROLL
 
         Sensor_1.dmpGetQuaternion(&quaternion_Sensor_1,Data_Array_Sensor_1);
@@ -381,6 +414,9 @@ void loop()
     #endif
 
     
+    /////////////////////////////////////////////
+    /////////////// Euler Winkel ////////////////
+    /////////////////////////////////////////////
     #ifdef EULER_VALUES
 
         Sensor_1.dmpGetQuaternion(&quaternion_Sensor_1,Data_Array_Sensor_1);
@@ -414,16 +450,18 @@ void loop()
         Serial.print("\t");
 
         /// Serielle Ausgabe Euler ///
-        Serial.print(euler_ergebnis[0] * 180 / M_PI);
-        Serial.print("\t");
-        Serial.print(euler_ergebnis[1] * 180 / M_PI);
-        Serial.print("\t");
-        Serial.println(euler_ergebnis[2] * 180 / M_PI);
+        // Serial.print(euler_ergebnis[0] * 180 / M_PI);
+        // Serial.print("\t");
+        // Serial.print(euler_ergebnis[1] * 180 / M_PI);
+        // Serial.print("\t");
+        // Serial.println(euler_ergebnis[2] * 180 / M_PI);
 
 
     #endif
 
-
+    /////////////////////////////////////////////
+    /////////////////Raw Values /////////////////
+    /////////////////////////////////////////////
     #ifdef Raw_ACCEL_GYRO
 
     Sensor_1.getMotion6(&Acc_x_Sensor_1,&Acc_y_Sensor_1,&Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
@@ -432,15 +470,23 @@ void loop()
 
     calculate_Mean_Value();
 
-    Serial.print(Acc_x_mean); Serial.print("\t");
-    Serial.print(Acc_y_mean); Serial.print("\t");
-    Serial.print(Acc_z_mean); Serial.print("\t");
+    Serial.print(Acc_x_Sensor_1); Serial.print("\t");
+    Serial.print(Acc_y_Sensor_1); Serial.print("\t");
+    Serial.print(Acc_z_Sensor_1); Serial.print("\t");
 
 
-    Serial.print(Gyro_x_mean); Serial.print("\t");
-    Serial.print(Gyro_y_mean); Serial.print("\t");
-    Serial.println(Gyro_z_mean);
+    Serial.print(Gyro_x_Sensor_1); Serial.print("\t");
+    Serial.print(Gyro_y_Sensor_1); Serial.print("\t");
+    Serial.print(Gyro_z_Sensor_1); Serial.print("\t");
 
+    Serial.print(Acc_x_Sensor_2); Serial.print("\t");
+    Serial.print(Acc_y_Sensor_2); Serial.print("\t");
+    Serial.print(Acc_z_Sensor_2); Serial.print("\t");
+
+
+    Serial.print(Gyro_x_Sensor_2); Serial.print("\t");
+    Serial.print(Gyro_y_Sensor_2); Serial.print("\t");
+    Serial.println(Gyro_z_Sensor_2);
     #endif
 
 
