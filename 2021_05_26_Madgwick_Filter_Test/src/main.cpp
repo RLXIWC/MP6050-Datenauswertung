@@ -32,7 +32,7 @@ MPU6050lib mpu;
 
 float aRes, gRes; // scale resolutions per LSB for the sensors
 // Pin definitions
-int intPin = 12;    // These can be changed, 2 and 3 are the Arduinos ext int pins
+int intPin = 18;    // These can be changed, 2 and 3 are the Arduinos ext int pins
 #define blinkPin 13 // Blink LED on Teensy or Pro Mini when updating
 boolean blinkOn = false;
 int16_t accelCount[3];                                   // Stores the 16-bit signed accelerometer sensor output
@@ -286,11 +286,11 @@ void loop()
     yaw *= 180.0f / PI;
     roll *= 180.0f / PI;
 
-    Serial.print("Yaw, Pitch, Roll: ");
+    // Serial.print("Yaw, Pitch, Roll: ");
     Serial.print(yaw, 2);
-    Serial.print(", ");
+     Serial.print("\t");
     Serial.print(pitch, 2);
-    Serial.print(", ");
+    Serial.print("\t");
     Serial.println(roll, 2);
 
     // //    Serial.print("average rate = "); Serial.print(1.0f/deltat, 2); Serial.println(" Hz");

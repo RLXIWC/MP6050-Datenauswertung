@@ -56,9 +56,9 @@ MPU6050 Sensor_2(MPU6050_ADDRESS_AD0_HIGH);                                     
 
 ///// AUSGABE DEFINES /////
 
-//#define YAW_PITCH_ROLL
+#define YAW_PITCH_ROLL
 //#define EULER_VALUES
-#define Raw_ACCEL_GYRO
+//#define Raw_ACCEL_GYRO
 
 
 //################################################################//
