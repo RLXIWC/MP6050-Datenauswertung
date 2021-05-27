@@ -46,12 +46,16 @@ MPU6050 Sensor_2(MPU6050_ADDRESS_AD0_HIGH); // Parameter ist neue Adresse 0x69  
 #define interruptPin_Sensor_1 18 // Interrupt Pin für ATMega 2560 für Sensor 1
 #define interruptPin_Sensor_2 19 // Interrupt Pin für ATMega 2560 für Sensor 2
 
+///// Mathematische AUsdrücke /////
+const float RADIANS_TO_DEGREES = 57.2958; //180/3.14159
+
 ///// AUSGABE DEFINES /////
 
 //#define QUATERNION_VALUES
 //#define YAW_PITCH_ROLL
-//#define EULER_VALUES
-#define Raw_ACCEL_GYRO
+#define EULER_VALUES
+#define ACCEL_GYRO
+//#define RAW_VALUES_COMPLEMENTARY
 
 //################################################################//
 //###################### globale Variablen #######################//
@@ -102,12 +106,19 @@ int16_t Gyro_y_Sensor_2; // Y-Achsen Drehraten Wert Sensor 2
 int16_t Gyro_z_Sensor_2; // Z-Achsen Drehraten Wert Sensor 2
 
 ///// Variablen für Mittelwert /////
-int16_t Acc_x_mean;  // X-Achsen Beschleunigungs Mittelwert
-int16_t Acc_y_mean;  // Y-Achsen Beschleunigungs Mittelwert
-int16_t Acc_z_mean;  // Z-Achsen Beschleunigungs Mittelwert
-int16_t Gyro_x_mean; // X-Achsen Drehraten Mittelwert
-int16_t Gyro_y_mean; // Y-Achsen Drehraten Mittelwert
-int16_t Gyro_z_mean; // Z-Achsen Drehraten Mittelwert
+float Acc_x_mean_Sensor_1;  // X-Achsen Beschleunigungs Mittelwert
+float Acc_y_mean_Sensor_1;  // Y-Achsen Beschleunigungs Mittelwert
+float Acc_z_mean_Sensor_1;  // Z-Achsen Beschleunigungs Mittelwert
+float Gyro_x_mean_Sensor_1; // X-Achsen Drehraten Mittelwert
+float Gyro_y_mean_Sensor_1; // Y-Achsen Drehraten Mittelwert
+float Gyro_z_mean_Sensor_1; // Z-Achsen Drehraten Mittelwert
+
+int16_t Acc_x_mean_Sensor_2;  // X-Achsen Beschleunigungs Mittelwert
+int16_t Acc_y_mean_Sensor_2;  // Y-Achsen Beschleunigungs Mittelwert
+int16_t Acc_z_mean_Sensor_2;  // Z-Achsen Beschleunigungs Mittelwert
+int16_t Gyro_x_mean_Sensor_2; // X-Achsen Drehraten Mittelwert
+int16_t Gyro_y_mean_Sensor_2; // Y-Achsen Drehraten Mittelwert
+int16_t Gyro_z_mean_Sensor_2; // Z-Achsen Drehraten Mittelwert
 
 ///// Quaternionen Objekte /////
 Quaternion quaternion_Sensor_1; // speichert Quaternionen Werte von Sensor 1 - Winkel und Drehachse in x, y, z Richtung
@@ -124,7 +135,25 @@ float yaw_pitch_roll_Sensor_2[3]; // Speichert den jeweiligen Winkel zur z, y, x
 float euler_Sensor_1[3]; // Speichert den jeweiligen Euler WInkel zur z,y,x Achse -Sensor 1
 float euler_Sensor_2[3]; // Speichert den jeweiligen Euler WInkel zur z,y,x Achse -Sensor 2
 
-long i = 0;
+///// Last Values for Angle Integration /////
+
+/// Sensor 1 ///
+unsigned long last_read_time_Sensor_1;
+float last_x_angle_Sensor_1; // These are the filtered angles
+float last_y_angle_Sensor_1;
+float last_z_angle_Sensor_1;
+float last_gyro_x_angle_Sensor_1; // Store the gyro angles to compare drift
+float last_gyro_y_angle_Sensor_1;
+float last_gyro_z_angle_Sensor_1;
+
+/// Sensor 2 ///
+unsigned long last_read_time_Sensor_2;
+float last_x_angle_Sensor_2; // These are the filtered angles
+float last_y_angle_Sensor_2;
+float last_z_angle_Sensor_2;
+float last_gyro_x_angle_Sensor_2; // Store the gyro angles to compare drift
+float last_gyro_y_angle_Sensor_2;
+float last_gyro_z_angle_Sensor_2;
 
 //################################################################//
 //######################### Functions ############################//
@@ -148,13 +177,13 @@ void Data_Available_ISR_Sensor_2()
 ////////////////////////
 void calculate_Mean_Value()
 {
-    Acc_x_mean = (Acc_x_Sensor_1 + Acc_x_Sensor_2) / 2;
-    Acc_y_mean = (Acc_y_Sensor_1 + Acc_y_Sensor_2) / 2;
-    Acc_z_mean = (Acc_z_Sensor_1 + Acc_z_Sensor_2) / 2;
+    Acc_x_mean_Sensor_1 = (Acc_x_Sensor_1 + Acc_x_Sensor_2) / 2;
+    Acc_y_mean_Sensor_1 = (Acc_y_Sensor_1 + Acc_y_Sensor_2) / 2;
+    Acc_z_mean_Sensor_1 = (Acc_z_Sensor_1 + Acc_z_Sensor_2) / 2;
 
-    Gyro_x_mean = (Gyro_x_Sensor_1 + Gyro_x_Sensor_2) / 2;
-    Gyro_y_mean = (Gyro_y_Sensor_1 + Gyro_y_Sensor_2) / 2;
-    Gyro_z_mean = (Gyro_z_Sensor_1 + Gyro_z_Sensor_2) / 2;
+    Gyro_x_mean_Sensor_1 = (Gyro_x_Sensor_1 + Gyro_x_Sensor_2) / 2;
+    Gyro_y_mean_Sensor_1 = (Gyro_y_Sensor_1 + Gyro_y_Sensor_2) / 2;
+    Gyro_z_mean_Sensor_1 = (Gyro_z_Sensor_1 + Gyro_z_Sensor_2) / 2;
 }
 
 /////////////////////////////////////
@@ -166,6 +195,69 @@ void calculate_Mean_Value_Euler(float *meanEuler, float *euler1, float *euler2)
     meanEuler[1] = (euler1[1] + euler2[1]) / 2;
     meanEuler[2] = (euler1[2] + euler2[2]) / 2;
 }
+
+
+
+void calibrate_sensors()
+{
+    int num_readings = 10;
+
+    // Discard the first reading (don't know if this is needed or
+    // not, however, it won't hurt.)
+    Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
+
+    // Read and average the raw values
+    for (int i = 0; i < num_readings; i++)
+    {
+    Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
+    Gyro_x_mean_Sensor_1 += Gyro_x_Sensor_1;
+    Gyro_y_mean_Sensor_1 += Gyro_y_Sensor_1;
+    Gyro_z_mean_Sensor_1 += Gyro_z_Sensor_1;
+    Acc_x_mean_Sensor_1 += Acc_x_Sensor_1;
+    Acc_y_mean_Sensor_1 += Acc_y_Sensor_1;
+    Acc_z_mean_Sensor_1 += Acc_z_Sensor_1;
+    }
+
+    Gyro_x_mean_Sensor_1 /= num_readings;
+    Gyro_y_mean_Sensor_1 /= num_readings;
+    Gyro_z_mean_Sensor_1 /= num_readings;
+    Acc_x_mean_Sensor_1 /= num_readings;
+    Acc_y_mean_Sensor_1 /= num_readings;
+    Acc_z_mean_Sensor_1 /= num_readings;
+}
+
+
+inline unsigned long get_last_time(char pSensor)
+ { 
+     if(pSensor == 1)
+     {
+        return last_read_time_Sensor_1; 
+     }
+     else if (pSensor == 2)
+     {
+         return last_read_time_Sensor_2; 
+     }
+ }
+
+inline float get_last_x_angle() { return last_x_angle_Sensor_1; }
+inline float get_last_y_angle() { return last_y_angle_Sensor_1; }
+inline float get_last_z_angle() { return last_z_angle_Sensor_1; }
+inline float get_last_gyro_x_angle() { return last_gyro_x_angle_Sensor_1; }
+inline float get_last_gyro_y_angle() { return last_gyro_y_angle_Sensor_1; }
+inline float get_last_gyro_z_angle() { return last_gyro_z_angle_Sensor_1; }
+
+void set_last_read_angle_data(unsigned long time, float x, float y, float z, float x_gyro, float y_gyro, float z_gyro)
+{
+    last_read_time_Sensor_1 = time;
+    last_x_angle_Sensor_1 = x;
+    last_y_angle_Sensor_1 = y;
+    last_z_angle_Sensor_1 = z;
+    last_gyro_x_angle_Sensor_1 = x_gyro;
+    last_gyro_y_angle_Sensor_1 = y_gyro;
+    last_gyro_z_angle_Sensor_1 = z_gyro;
+}
+
+
 
 //################################################################//
 //########################### SETUP ##############################//
@@ -214,12 +306,13 @@ void setup()
     }
     while (!Serial.available()) // wait for data
     {
-        Serial.println("wait for data");
+        Serial.println("Bitte Zeichen eingeben");
     }
     while (Serial.available() && Serial.read()) // empty buffer again
     {
         Serial.println("emtpy again");
     }
+
 
     /////////////////////////////////////////////
     /////// Initialisieren der Sensor DMP ///////
@@ -236,22 +329,22 @@ void setup()
     /////////////////////
     /////  Sensor 1 /////
     /////////////////////
-    // Sensor_1.setXGyroOffset(106);
-    // Sensor_1.setYGyroOffset(-2);
-    // Sensor_1.setZGyroOffset(16);
-    // Sensor_1.setXAccelOffset(-1816);
-    // Sensor_1.setYAccelOffset(-3695);
-    // Sensor_1.setZAccelOffset(5060);
+    Sensor_1.setXGyroOffset(107);
+    Sensor_1.setYGyroOffset(-1);
+    Sensor_1.setZGyroOffset(30);
+    Sensor_1.setXAccelOffset(-1700);
+    Sensor_1.setYAccelOffset(-3673);
+    Sensor_1.setZAccelOffset(5078);
 
     /////////////////////
     /////  Sensor 2 /////
     /////////////////////
-    // Sensor_2.setXGyroOffset(280);
-    // Sensor_2.setYGyroOffset(-32);
-    // Sensor_2.setZGyroOffset(51);
-    // Sensor_2.setXAccelOffset(-4972);
-    // Sensor_2.setYAccelOffset(-1219);
-    // Sensor_2.setZAccelOffset(1120);
+    Sensor_2.setXGyroOffset(301);
+    Sensor_2.setYGyroOffset(-57);
+    Sensor_2.setZGyroOffset(60);
+    Sensor_2.setXAccelOffset(-4868);
+    Sensor_2.setYAccelOffset(-1227);
+    Sensor_2.setZAccelOffset(1144);
 
     ////////////////////////////////////////////
     ///// Sensor 1 PID Regler Kalibrierung /////
@@ -260,13 +353,13 @@ void setup()
     if (DMP_Status_Int_Sensor_1 == 0)
     {
 
-        //Sensor_1.CalibrateAccel(15); // Starten des PID Reglers
-        //Sensor_1.CalibrateGyro(15);
-        //Serial.println();
-        //Sensor_1.PrintActiveOffsets(); // Zeige ermittelte Offset Werte
+        // Sensor_1.CalibrateAccel(15); // Starten des PID Reglers
+        // Sensor_1.CalibrateGyro(15);
+        // Serial.println();
+        Sensor_1.PrintActiveOffsets(); // Zeige ermittelte Offset Werte
 
         /// Interrupt ///
-        Sensor_1.setDMPEnabled(true); // Interrupts enablen Sensor 1
+        //Sensor_1.setDMPEnabled(true); // Interrupts enablen Sensor 1
         //Serial.print(digitalPinToInterrupt(INTERRUPT_PIN));
         //attachInterrupt(2, Data_Available_ISR_Sensor_1,RISING);                                                               // Interrupt Routine zuwesien Sensor 1 - Pin 18
 
@@ -288,13 +381,13 @@ void setup()
 
     if (DMP_Status_Int_Sensor_2 == 0)
     {
-        //Sensor_2.CalibrateAccel(15); // Starten des PID Reglers
-        //Sensor_2.CalibrateGyro(15);
-        //Serial.println();
-        //Sensor_2.PrintActiveOffsets(); // Zeige ermittelte Offset Werte
+        // Sensor_2.CalibrateAccel(15); // Starten des PID Reglers
+        // Sensor_2.CalibrateGyro(15);
+        // Serial.println();
+        Sensor_2.PrintActiveOffsets(); // Zeige ermittelte Offset Werte
 
         /// Interrupt ///
-        Sensor_2.setDMPEnabled(true); // Interrupts enablen Sensor 1
+        //Sensor_2.setDMPEnabled(true); // Interrupts enablen Sensor 1
         //Serial.print(digitalPinToInterrupt(INTERRUPT_PIN));
         //attachInterrupt(2, Data_Available_ISR_Sensor_1,RISING);                                                               // Interrupt Routine zuwesien Sensor 1 - Pin 18
 
@@ -310,6 +403,8 @@ void setup()
         Serial.println("Initializing DMP Sensor 2 failed -> press RESET");
     }
 
+
+
 ///////////////////////////////////////
 /////////// Startausgaben /////////////
 ///////////////////////////////////////
@@ -324,7 +419,8 @@ void setup()
     Serial.println("Winkel in: z-Achse, y-Achse, x-Achse");
 #endif
 
-    delay(10000); // Start abwarten bis eingependelt nach Kalibrierung
+    //calibrate_sensors();
+    delay(5000); // Start abwarten bis eingependelt nach Kalibrierung
 }
 
 //################################################################//
@@ -346,8 +442,6 @@ void loop()
     Sensor_1.dmpGetCurrentFIFOPacket(Data_Array_Sensor_1); // get Current FIFO Packet holt autpmatisch die richtige packetsize
     Sensor_2.dmpGetCurrentFIFOPacket(Data_Array_Sensor_2);
 
-    //Serial.print(i);
-    //Serial.print(millis());
 
 /////////////////////////////////////////////
 //////////////// Quaternionen ///////////////
@@ -417,7 +511,7 @@ void loop()
 
     float euler_ergebnis[3];
 
-    calculate_Mean_Value_Euler(euler_ergebnis, euler_Sensor_1, euler_Sensor_2);
+    //calculate_Mean_Value_Euler(euler_ergebnis, euler_Sensor_1, euler_Sensor_2);
 
     Serial.print(euler_Sensor_1[0] * 180 / M_PI);
     Serial.print("\t");
@@ -445,41 +539,92 @@ void loop()
 /////////////////////////////////////////////
 /////////////////Raw Values /////////////////
 /////////////////////////////////////////////
-#ifdef Raw_ACCEL_GYRO
+#ifdef ACCEL_GYRO
 
     Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
     Sensor_2.getMotion6(&Acc_x_Sensor_2, &Acc_y_Sensor_2, &Acc_z_Sensor_2, &Gyro_x_Sensor_2, &Gyro_y_Sensor_2, &Gyro_z_Sensor_2);
 
-    calculate_Mean_Value();
+    // calculate_Mean_Value();
 
-    Serial.print((float)Acc_x_Sensor_1 / 16384.0);
+    Serial.print((float)Acc_x_Sensor_1/2048.0);
     Serial.print("\t");
-    Serial.print((float)Acc_y_Sensor_1 / 16384.0);
+    Serial.print((float)Acc_y_Sensor_1 / 2048.0);
     Serial.print("\t");
-    Serial.print((float)Acc_z_Sensor_1 / 16384.0);
-    Serial.print("\t");
-
-    Serial.print(Gyro_x_Sensor_1 / 131);
-    Serial.print("\t");
-    Serial.print(Gyro_y_Sensor_1 / 131);
-    Serial.print("\t");
-    Serial.print(Gyro_z_Sensor_1 / 131);
+    Serial.print((float)Acc_z_Sensor_1 / 2048.0);
     Serial.print("\t");
 
-    Serial.print((float)Acc_x_Sensor_2 / 16384.0);
+    Serial.print((float)Gyro_x_Sensor_1 / 131);
     Serial.print("\t");
-    Serial.print((float)Acc_y_Sensor_2 / 16384.0);
+    Serial.print((float)Gyro_y_Sensor_1 / 131);
     Serial.print("\t");
-    Serial.print((float)Acc_z_Sensor_2 / 16384.0);
+    Serial.print((float)Gyro_z_Sensor_1 / 131);
     Serial.print("\t");
 
-    Serial.print(Gyro_x_Sensor_2 / 131);
+    Serial.print((float)Acc_x_Sensor_2 / 2048.0);
     Serial.print("\t");
-    Serial.print(Gyro_y_Sensor_2 / 131);
+    Serial.print((float)Acc_y_Sensor_2 / 2048.0);
     Serial.print("\t");
-    Serial.println(Gyro_z_Sensor_2 / 131);
+    Serial.print((float)Acc_z_Sensor_2 / 2048.0);
+    Serial.print("\t");
+
+    Serial.print((float)Gyro_x_Sensor_2 / 131);
+    Serial.print("\t");
+    Serial.print((float)Gyro_y_Sensor_2 / 131);
+    Serial.print("\t");
+    Serial.println((float)Gyro_z_Sensor_2 / 131);
+    
 #endif
 
+#ifdef RAW_VALUES_COMPLEMENTARY
+
+    Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);                  // Liest die entsprechenden Register aus per I2C read()
+    // Sensor_2.getMotion6(&Acc_x_Sensor_2, &Acc_y_Sensor_2, &Acc_z_Sensor_2, &Gyro_x_Sensor_2, &Gyro_y_Sensor_2, &Gyro_z_Sensor_2);
+
+    unsigned long currentTime = millis();
+    
+    float scaled_gyro_x_sensor_1 = (Gyro_x_Sensor_1 - Gyro_x_mean_Sensor_1) / 131;
+    float scaled_gyro_y_sensor_1 = (Gyro_y_Sensor_1 - Gyro_y_mean_Sensor_1) / 131;
+    float scaled_gyro_z_sensor_1 = (Gyro_z_Sensor_1 - Gyro_z_mean_Sensor_1) / 131;
+    float scaled_acc_x_sensor_1 = Acc_x_Sensor_1;
+    float scaled_acc_y_sensor_1 = Acc_y_Sensor_1;
+    float scaled_acc_z_sensor_1 = Acc_z_Sensor_1;
+
+    float accel_angle_y = atan(-1 * scaled_acc_x_sensor_1 / sqrt(pow(scaled_acc_y_sensor_1, 2) + pow(scaled_acc_z_sensor_1, 2))) * RADIANS_TO_DEGREES;
+    float accel_angle_x = atan(scaled_acc_y_sensor_1 / sqrt(pow(scaled_acc_x_sensor_1, 2) + pow(scaled_acc_z_sensor_1, 2))) * RADIANS_TO_DEGREES;
+    float accel_angle_z = 0;
+
+    // Compute the (filtered) gyro angles
+    float dt = (currentTime - get_last_time(1)) / 1000.0;
+    float gyro_angle_x = scaled_gyro_x_sensor_1 * dt + get_last_x_angle();
+    float gyro_angle_y = scaled_gyro_y_sensor_1 * dt + get_last_y_angle();
+    float gyro_angle_z = scaled_gyro_z_sensor_1 * dt + get_last_z_angle();
+
+    // Compute the drifting gyro angles
+
+    float unfiltered_gyro_angle_x = scaled_gyro_x_sensor_1 * dt + get_last_gyro_x_angle();
+    float unfiltered_gyro_angle_y = scaled_gyro_y_sensor_1 * dt + get_last_gyro_y_angle();
+    float unfiltered_gyro_angle_z = scaled_gyro_z_sensor_1 * dt + get_last_gyro_z_angle();
+
+
+    ///// Complementär Filter /////
+    const float alpha = 0.96;
+    float angle_x = alpha * gyro_angle_x + (1.0 - alpha) * accel_angle_x;
+    float angle_y = alpha * gyro_angle_y + (1.0 - alpha) * accel_angle_y;
+    float angle_z = gyro_angle_z; //Accelerometer doesn't give z-angle
+
+    set_last_read_angle_data(currentTime, angle_x, angle_y, angle_z, unfiltered_gyro_angle_x, unfiltered_gyro_angle_y, unfiltered_gyro_angle_z);
+
+    Serial.print("CMP:");
+    Serial.print(get_last_x_angle(), 2);
+    Serial.print(":");
+    Serial.print(get_last_y_angle(), 2);
+    Serial.print(":");
+    Serial.println(-get_last_z_angle(), 2);
+
+
+#endif
+
+
     //delay(1000);                                                                                                                                // Sekündliche Prints
-    i++;
 }
+
