@@ -56,7 +56,11 @@ float     angleX;
 float     angleY;
 float     angleZ;
 
-float lasttime= 0;
+float last_angleX;
+float last_angleY;
+float last_angleZ;
+
+unsigned long lasttime= 0;
 
 //################################################################//
 //######################### Functions ############################//
@@ -136,6 +140,14 @@ void ResetRegisters(char pSensor)
     Serial.println(temp);
   }
 }
+
+void set_last_read_angle_data(unsigned long ptime, float pangleX, float pangleY, float pangleZ) {
+  lasttime = ptime;
+  last_angleX = pangleX;
+  last_angleY = pangleY;
+  last_angleZ = pangleZ;
+}
+
 
 
 
@@ -272,6 +284,7 @@ Wire.endTransmission();
   // Wire.write((char)pData);                                                                                  // LSB schreiben
   // Wire.endTransmission();
 
+set_last_read_angle_data(millis(),0,0,0);
 
 }
 
@@ -312,18 +325,21 @@ void loop()
   // Serial.print("\t");  
   // Serial.println(gyroZ);
 
-  accelX    = ((float)accelX/2048.0);                                         
-  accelY    = ((float)accelY/2048.0);                                               
-  accelZ    = ((float)accelZ/2048.0);                                         
+  accelX    = (accelX/2048.0)*9.81;                                         
+  accelY    = (accelY/2048.0)*9.81;                                               
+  accelZ    = (accelZ/2048.0)*9.81;                                         
 
-  gyroX     = ((float)gyroX)/131;
-  gyroY     = ((float)gyroY)/131;
-  gyroZ     = ((float)gyroZ)/131;
+  gyroX     = (gyroX)/131;
+  gyroY     = (gyroY)/131;
+  gyroZ     = (gyroZ)/131;
 
-  // getAngle(&angleX,&gyroX);
-  // getAngle(&angleY,&gyroY);
-  // getAngle(&angleZ,&gyroZ);
 
+  float dt = (millis()-lasttime)/1000.0;
+  angleX = gyroX * dt + last_angleX;
+  angleY = gyroY * dt + last_angleY;
+  angleZ = gyroZ * dt + last_angleZ;
+
+  set_last_read_angle_data(millis(),angleX,angleY,angleZ);
 
   // sumsquare = sqrt(accelX*accelX+accelY*accelY +accelZ*accelZ);            // Quadratsum
   // accelX    = accelX/sumsquare;                                            // adjust
@@ -351,7 +367,14 @@ void loop()
   Serial.print("\t");  
   Serial.print(gyroY);
   Serial.print("\t");  
-  Serial.println(gyroZ);
+  Serial.print(gyroZ);
+  Serial.print("\t");  
+
+  Serial.print(angleX);
+  Serial.print("\t");  
+  Serial.print(angleY);
+  Serial.print("\t");  
+  Serial.println(angleZ);
   
 
   // Serial.print(angleX);
@@ -361,6 +384,6 @@ void loop()
   // Serial.println(angleZ);
 
 
-   delay(500);
+   delay(50);
   // lasttime = millis();
 }
