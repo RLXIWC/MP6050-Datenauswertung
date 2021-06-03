@@ -163,14 +163,14 @@ uint8_t pidloop = 15;
 
 /// Sensor 1 ///
 unsigned long last_read_time_Sensor_1;
-float yaw_sensor_1;
-float pitch_sensor_1;
-float roll_sensor_1;
+float yaw_sensor_1 = 0;
+float pitch_sensor_1 = 0;
+float roll_sensor_1 = 0;
 /// Sensor 2 ///
 unsigned long last_read_time_Sensor_2;
-float yaw_sensor_2;
-float pitch_sensor_2;
-float roll_sensor_2;
+float yaw_sensor_2 = 0;
+float pitch_sensor_2 = 0;
+float roll_sensor_2 = 0;
 #endif
 
 //################################################################//
@@ -500,6 +500,13 @@ void loop()
     Serial.print("\t");
     Serial.print(yaw_pitch_roll_Sensor_1[2] * RADIANS_TO_DEGREES);
     Serial.print("\t");
+
+    Serial.print(yaw_pitch_roll_Sensor_2[0] * RADIANS_TO_DEGREES);
+    Serial.print("\t");
+    Serial.print(yaw_pitch_roll_Sensor_2[1] * RADIANS_TO_DEGREES);
+    Serial.print("\t");
+    Serial.print(yaw_pitch_roll_Sensor_2[2] * RADIANS_TO_DEGREES);
+    Serial.print("\t");
 #endif
 
 #ifdef EULER_VALUES
@@ -562,7 +569,7 @@ void loop()
     Serial.print("\t");
     Serial.print(pitch_sensor_2);
     Serial.print("\t");
-    Serial.print(roll_sensor_1);
+    Serial.print(roll_sensor_2);
     Serial.print("\t");
 
 #endif
