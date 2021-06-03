@@ -499,7 +499,7 @@ void loop()
     Serial.print(yaw_pitch_roll_Sensor_1[1] * RADIANS_TO_DEGREES);
     Serial.print("\t");
     Serial.print(yaw_pitch_roll_Sensor_1[2] * RADIANS_TO_DEGREES);
-    Serial.println("\t");
+    Serial.print("\t");
 #endif
 
 #ifdef EULER_VALUES
