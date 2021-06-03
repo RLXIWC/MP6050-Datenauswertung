@@ -214,9 +214,9 @@ void ComplementaryFilter_Sensor_1(int16_t accData[3], int16_t gyrData[3], float 
     float pitchAcc, rollAcc;
 
     // Integrate the gyroscope data -> int(angularSpeed) = angle
-    *yaw += ((float)gyrData[2] / GYRO_SENS_FACTOR_250) * (micros() - last_read_time_Sensor_1) * 1000000;   // Winkel um z-Achse
-    *pitch += ((float)gyrData[0] / GYRO_SENS_FACTOR_250) * (micros() - last_read_time_Sensor_1) * 1000000; // Angle around the X-axis
-    *roll -= ((float)gyrData[1] / GYRO_SENS_FACTOR_250) * (micros() - last_read_time_Sensor_1) * 1000000;  // Angle around the Y-axis
+    *yaw += ((float)gyrData[2] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) * 1000;   // Winkel um z-Achse
+    *pitch += ((float)gyrData[0] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) * 1000; // Angle around the X-axis
+    *roll -= ((float)gyrData[1] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) * 1000;  // Angle around the Y-axis
 
     // Compensate for drift with accelerometer data if !bullshit
     // Sensitivity = -2 to 2 G at 16Bit -> 2G = 32768 && 0.5G = 8192
@@ -238,9 +238,9 @@ void ComplementaryFilter_Sensor_2(int16_t accData[3], int16_t gyrData[3], float 
     float pitchAcc, rollAcc;
 
     // Integrate the gyroscope data -> int(angularSpeed) = angle
-    *yaw += ((float)gyrData[2] / GYRO_SENS_FACTOR_250) * (micros() - last_read_time_Sensor_1) * 1000000;   // Winkel um z-Achse
-    *pitch += ((float)gyrData[0] / GYRO_SENS_FACTOR_250) * (micros() - last_read_time_Sensor_2) * 1000000; // Angle around the X-axis
-    *roll -= ((float)gyrData[1] / GYRO_SENS_FACTOR_250) * (micros() - last_read_time_Sensor_2) * 1000000;  // Angle around the Y-axis
+    *yaw += ((float)gyrData[2] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) * 1000;   // Winkel um z-Achse
+    *pitch += ((float)gyrData[0] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_2) * 1000; // Angle around the X-axis
+    *roll -= ((float)gyrData[1] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_2) * 1000;  // Angle around the Y-axis
 
     // Compensate for drift with accelerometer data if !bullshit
     // Sensitivity = -2 to 2 G at 16Bit -> 2G = 32768 && 0.5G = 8192
@@ -399,6 +399,15 @@ void setup()
     }
 #endif
 
+#ifdef COMPLEMENT_FILTER
+    ///////////////////////////////
+    ///// Komplementär Filter /////
+    ///////////////////////////////
+    last_read_time_Sensor_1 = millis();
+    last_read_time_Sensor_2 = millis();
+
+#endif
+
     ///////////////////////////////////////
     /////////// Startausgaben /////////////
     ///////////////////////////////////////
@@ -555,8 +564,8 @@ void loop()
 
     ComplementaryFilter_Sensor_1(Acc_Array_Sensor_1, Gyro_Array_Sensor_1, &yaw_sensor_1, &pitch_sensor_1, &roll_sensor_1);
     ComplementaryFilter_Sensor_2(Acc_Array_Sensor_2, Gyro_Array_Sensor_2, &yaw_sensor_2, &pitch_sensor_2, &roll_sensor_2);
-    last_read_time_Sensor_1 = micros();
-    last_read_time_Sensor_2 = micros();
+    last_read_time_Sensor_1 = millis();
+    last_read_time_Sensor_2 = millis();
 
     Serial.print(yaw_sensor_1);
     Serial.print("\t");
