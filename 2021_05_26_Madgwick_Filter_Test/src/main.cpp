@@ -252,7 +252,7 @@ void loop()
 
   // Serial print and/or display at 0.5 s rate independent of data rates
   delt_t = millis() - count;
-  if (delt_t > 500)
+  if (delt_t > 100)
   { // update LCD once per half-second independent of read rate
     digitalWrite(blinkPin, blinkOn);
     /*

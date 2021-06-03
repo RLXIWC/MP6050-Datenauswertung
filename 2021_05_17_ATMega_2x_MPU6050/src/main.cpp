@@ -52,9 +52,9 @@ const float RADIANS_TO_DEGREES = 57.2958; //180/3.14159
 ///// AUSGABE DEFINES /////
 
 // #define QUATERNION_VALUES
-#define YAW_PITCH_ROLL
-//#define EULER_VALUES
-//#define ACCEL_GYRO
+//#define YAW_PITCH_ROLL
+#define EULER_VALUES
+#define ACCEL_GYRO
 //#define RAW_VALUES_COMPLEMENTARY
 
 //################################################################//
@@ -306,20 +306,20 @@ void setup()
     // }
 
     /// Serial Buffer leeren ///
-    Serial.println("Send any character to begin DMP programming and demo: ");
-    while (Serial.available() && Serial.read()) // empty buffer
-    {
-        Serial.println("emtpy buffer");
-    }
-    while (!Serial.available()) // wait for data
-    {
-        Serial.println("Bitte Zeichen eingeben");
-        delay(500);
-    }
-    while (Serial.available() && Serial.read()) // empty buffer again
-    {
-        Serial.println("emtpy again");
-    }
+    // Serial.println("Send any character to begin DMP programming and demo: ");
+    // while (Serial.available() && Serial.read()) // empty buffer
+    // {
+    //     Serial.println("emtpy buffer");
+    // }
+    // while (!Serial.available()) // wait for data
+    // {
+    //     Serial.println("Bitte Zeichen eingeben");
+    //     delay(500);
+    // }
+    // while (Serial.available() && Serial.read()) // empty buffer again
+    // {
+    //     Serial.println("emtpy again");
+    // }
 
 
     /////////////////////////////////////////////
@@ -337,12 +337,12 @@ void setup()
     /////////////////////
     /////  Sensor 1 /////
     /////////////////////
-    // Sensor_1.setXGyroOffset(107);
-    // Sensor_1.setYGyroOffset(-1);
-    // Sensor_1.setZGyroOffset(30);
-    // Sensor_1.setXAccelOffset(-1700);
-    // Sensor_1.setYAccelOffset(-3673);
-    // Sensor_1.setZAccelOffset(5078);
+    // Sensor_1.setXGyroOffset(3000);
+    // Sensor_1.setYGyroOffset(-1000);
+    // Sensor_1.setZGyroOffset(3000);
+    // Sensor_1.setXAccelOffset(10000);
+    // Sensor_1.setYAccelOffset(-10000);
+    // Sensor_1.setZAccelOffset(15000);
 
     /////////////////////
     /////  Sensor 2 /////
@@ -436,23 +436,23 @@ void setup()
     Wire.endTransmission(true);                                                            // transmission finished
 
     Serial.print("Gyro Sensitivity set before loop: \t");
-    Serial.println((int)temp);
+    Serial.println(temp,DEC);
 
     Wire.beginTransmission(MPU6050_ADDRESS_AD0_LOW);                                        // 0x68 Sensor 1
     Wire.write(0x1C);                                                                       // Gyro Config Register
     Wire.endTransmission(false);                                                            // transmission not finished
-    temp = Wire.requestFrom(MPU6050_ADDRESS_AD0_LOW,1,true);                           // Pick the 14 registers
+    temp = Wire.requestFrom(MPU6050_ADDRESS_AD0_LOW,1,true);                                // Pick the 14 registers
     Wire.endTransmission(true);                                                            // transmission finished
 
     Serial.print("Acceleration Sensitivity set before loop: \t");
-    Serial.println((int)temp);
+    Serial.println(temp,DEC);
 
     //////////////////////////////////
 
 
 
     //calibrate_sensors();
-    delay(5000); // Start abwarten bis eingependelt nach Kalibrierung
+    delay(3000); // Start abwarten bis eingependelt nach Kalibrierung
 }
 
 //################################################################//
@@ -552,12 +552,12 @@ void loop()
     Serial.print(euler_Sensor_1[2] * 180 / M_PI);
     Serial.print("\t");
 
-    Serial.print(euler_Sensor_2[0] * 180 / M_PI);
-    Serial.print("\t");
-    Serial.print(euler_Sensor_2[1] * 180 / M_PI);
-    Serial.print("\t");
-    Serial.print(euler_Sensor_2[2] * 180 / M_PI);
-    Serial.print("\t");
+    // Serial.print(euler_Sensor_2[0] * 180 / M_PI);
+    // Serial.print("\t");
+    // Serial.print(euler_Sensor_2[1] * 180 / M_PI);
+    // Serial.print("\t");
+    // Serial.print(euler_Sensor_2[2] * 180 / M_PI);
+    // Serial.print("\t");
 
     /// Serielle Ausgabe Euler ///
     // Serial.print(euler_ergebnis[0] * 180 / M_PI);
