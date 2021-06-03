@@ -34,16 +34,16 @@
 //################################################################//
 
 ////// Gyro Sensitivities /////
-#define GYRO_SENS_FACTOR_250 131
+#define GYRO_SENS_FACTOR_250 131.0
 #define GYRO_SENS_FACTOR_500 65.5
 #define GYRO_SENS_FACTOR_1000 32.8
 #define GYRO_SENS_FACTOR_2000 16.4
 
 ////// Acceleration Sensitivities /////
-#define ACC_SENS_FACTOR_2 16384
-#define ACC_SENS_FACTOR_4 8192
-#define ACC_SENS_FACTOR_8 4096
-#define ACC_SENS_FACTOR_16 2048
+#define ACC_SENS_FACTOR_2 16384.0
+#define ACC_SENS_FACTOR_4 8192.0
+#define ACC_SENS_FACTOR_8 4096.0
+#define ACC_SENS_FACTOR_16 2048.0
 
 ///// I2C Pins zuweisen /////
 #define SDA_Pin 20 // Seriell Data Pin
@@ -59,9 +59,9 @@
 //////// AUSGABE DEFINES //////////
 ///////////////////////////////////
 
-#define QUATERNION_VALUES
-#define YAW_PITCH_ROLL
-#define EULER_VALUES
+// #define QUATERNION_VALUES
+// #define YAW_PITCH_ROLL
+// #define EULER_VALUES
 #define FILTERED_VALUES
 
 ///////////////////////////////////
@@ -212,25 +212,28 @@ void calibrate_sensors()
 void ComplementaryFilter_Sensor_1(int16_t accData[3], int16_t gyrData[3], float *yaw, float *pitch, float *roll)
 {
     float pitchAcc, rollAcc;
+    float dt = millis() - last_read_time_Sensor_1;
 
     // Integrate the gyroscope data -> int(angularSpeed) = angle
-    *yaw += ((float)gyrData[2] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) * 1000;   // Winkel um z-Achse
-    *pitch += ((float)gyrData[0] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) * 1000; // Angle around the X-axis
-    *roll -= ((float)gyrData[1] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) * 1000;  // Angle around the Y-axis
+    *yaw += ((float)gyrData[2] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) / 1000;   // Winkel um z-Achse
+    *roll += ((float)gyrData[0] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) / 1000;  // Angle around the X-axis
+    *pitch -= ((float)gyrData[1] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) / 1000; // Angle around the Y-axis
+
+    accData[0] = (float)accData[0] / ACC_SENS_FACTOR_2; // Umrechnung mit Scale Faktor
+    accData[1] = (float)accData[1] / ACC_SENS_FACTOR_2;
+    accData[2] = (float)accData[2] / ACC_SENS_FACTOR_2;
 
     // Compensate for drift with accelerometer data if !bullshit
     // Sensitivity = -2 to 2 G at 16Bit -> 2G = 32768 && 0.5G = 8192
     int forceMagnitudeApprox = abs(accData[0]) + abs(accData[1]) + abs(accData[2]);
-    if (forceMagnitudeApprox > 8192 && forceMagnitudeApprox < 32768)
-    {
-        // Turning around the X axis results in a vector on the Y-axis
-        pitchAcc = atan2f((float)accData[1], (float)accData[2]) * RADIANS_TO_DEGREES;
-        *pitch = *pitch * 0.98 + pitchAcc * 0.02;
 
-        // Turning around the Y axis results in a vector on the X-axis
-        rollAcc = atan2f((float)accData[0], (float)accData[2]) * RADIANS_TO_DEGREES;
-        *roll = *roll * 0.98 + rollAcc * 0.02;
-    }
+    // Turning around the X axis results in a vector on the Y-axis
+    rollAcc = atan(accData[1] / sqrt(pow(accData[0], 2) + pow(accData[3], 2))) * RADIANS_TO_DEGREES;
+    *roll = *roll * 0.98 + rollAcc * 0.02;
+
+    // Turning around the Y axis results in a vector on the X-axis
+    pitchAcc = atan(-1 * accData[0] / sqrt(pow(accData[1], 2) + pow(accData[3], 2))) * RADIANS_TO_DEGREES;
+    *pitch = *pitch * 0.98 + pitchAcc * 0.02;
 }
 
 void ComplementaryFilter_Sensor_2(int16_t accData[3], int16_t gyrData[3], float *yaw, float *pitch, float *roll)
@@ -238,23 +241,25 @@ void ComplementaryFilter_Sensor_2(int16_t accData[3], int16_t gyrData[3], float 
     float pitchAcc, rollAcc;
 
     // Integrate the gyroscope data -> int(angularSpeed) = angle
-    *yaw += ((float)gyrData[2] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) * 1000;   // Winkel um z-Achse
-    *pitch += ((float)gyrData[0] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_2) * 1000; // Angle around the X-axis
-    *roll -= ((float)gyrData[1] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_2) * 1000;  // Angle around the Y-axis
+    *yaw += ((float)gyrData[2] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) / 1000;   // Winkel um z-Achse
+    *roll += ((float)gyrData[0] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) / 1000;  // Angle around the X-axis
+    *pitch -= ((float)gyrData[1] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) / 1000; // Angle around the Y-axis
+
+    // accData[0] = accData[0] / ACC_SENS_FACTOR_2; // Umrechnung mit Scale Faktor
+    // accData[1] = accData[1] / ACC_SENS_FACTOR_2;
+    // accData[2] = accData[2] / ACC_SENS_FACTOR_2;
 
     // Compensate for drift with accelerometer data if !bullshit
     // Sensitivity = -2 to 2 G at 16Bit -> 2G = 32768 && 0.5G = 8192
     int forceMagnitudeApprox = abs(accData[0]) + abs(accData[1]) + abs(accData[2]);
-    if (forceMagnitudeApprox > 8192 && forceMagnitudeApprox < 32768)
-    {
-        // Turning around the X axis results in a vector on the Y-axis
-        pitchAcc = atan2f((float)accData[1], (float)accData[2]) * RADIANS_TO_DEGREES;
-        *pitch = *pitch * 0.98 + pitchAcc * 0.02;
 
-        // Turning around the Y axis results in a vector on the X-axis
-        rollAcc = atan2f((float)accData[0], (float)accData[2]) * RADIANS_TO_DEGREES;
-        *roll = *roll * 0.98 + rollAcc * 0.02;
-    }
+    // Turning around the X axis results in a vector on the Y-axis
+    rollAcc = atan(accData[1] / sqrt(pow(accData[0], 2) + pow(accData[3], 2))) * RADIANS_TO_DEGREES;
+    *roll = *roll * 0.98 + rollAcc * 0.02;
+
+    // Turning around the Y axis results in a vector on the X-axis
+    pitchAcc = atan(-1 * accData[0] / sqrt(pow(accData[1], 2) + pow(accData[3], 2))) * RADIANS_TO_DEGREES;
+    *pitch = *pitch * 0.98 + pitchAcc * 0.02;
 }
 
 #endif
@@ -562,24 +567,44 @@ void loop()
     int16_t Gyro_Array_Sensor_1[3] = {Gyro_x_Sensor_1, Gyro_y_Sensor_1, Gyro_z_Sensor_1};
     int16_t Gyro_Array_Sensor_2[3] = {Gyro_x_Sensor_2, Gyro_y_Sensor_2, Gyro_z_Sensor_2};
 
-    ComplementaryFilter_Sensor_1(Acc_Array_Sensor_1, Gyro_Array_Sensor_1, &yaw_sensor_1, &pitch_sensor_1, &roll_sensor_1);
-    ComplementaryFilter_Sensor_2(Acc_Array_Sensor_2, Gyro_Array_Sensor_2, &yaw_sensor_2, &pitch_sensor_2, &roll_sensor_2);
+    //    ComplementaryFilter_Sensor_1(Acc_Array_Sensor_1, Gyro_Array_Sensor_1, &yaw_sensor_1, &pitch_sensor_1, &roll_sensor_1);
+    //     ComplementaryFilter_Sensor_2(Acc_Array_Sensor_2, Gyro_Array_Sensor_2, &yaw_sensor_2, &pitch_sensor_2, &roll_sensor_2);
+
+    float Gyro_x_Scaled_Sensor_1 = Gyro_x_Sensor_1 / GYRO_SENS_FACTOR_250;
+    float Gyro_y_Scaled_Sensor_1 = Gyro_y_Sensor_1 / GYRO_SENS_FACTOR_250;
+    float Gyro_z_Scaled_Sensor_1 = Gyro_z_Sensor_1 / GYRO_SENS_FACTOR_250;
+
+    roll_sensor_1 = roll_sensor_1 + (Gyro_x_Scaled_Sensor_1 * (millis() - last_read_time_Sensor_1) / 1000) * RADIANS_TO_DEGREES;
+    pitch_sensor_1 = pitch_sensor_1 + (Gyro_y_Scaled_Sensor_1 * (millis() - last_read_time_Sensor_1) / 1000) * RADIANS_TO_DEGREES;
+
     last_read_time_Sensor_1 = millis();
     last_read_time_Sensor_2 = millis();
 
-    Serial.print(yaw_sensor_1);
-    Serial.print("\t");
+    Acc_x_Sensor_1 = Acc_x_Sensor_1;
+    Acc_y_Sensor_1 = Acc_y_Sensor_1;
+    Acc_z_Sensor_1 = Acc_z_Sensor_1;
+
+    float Acc_angle_y_Sensor_1 = atan2(Acc_y_Sensor_1, Acc_z_Sensor_1) * RADIANS_TO_DEGREES;
+    float Acc_angle_x_Sensor_1 = atan2(Acc_x_Sensor_1, Acc_z_Sensor_1) * RADIANS_TO_DEGREES;
+    float Acc_angle_y_Sensor_2 = atan2(Acc_y_Sensor_2, Acc_z_Sensor_2) * RADIANS_TO_DEGREES;
+    float Acc_angle_x_Sensor_2 = atan2(Acc_x_Sensor_2, Acc_z_Sensor_2) * RADIANS_TO_DEGREES;
+
+    float pitch_filtered_sensor_1 = 0.96 * (pitch_sensor_1) + 0.04 * Acc_angle_y_Sensor_1;
+    float roll_filtered_sensor_1 = 0.96 * (roll_sensor_1) + 0.04 * Acc_angle_x_Sensor_1;
+
+    // Serial.print(yaw_sensor_1);
+    // Serial.print("\t");
     Serial.print(pitch_sensor_1);
     Serial.print("\t");
     Serial.print(roll_sensor_1);
     Serial.print("\t");
 
-    Serial.print(yaw_sensor_2);
-    Serial.print("\t");
-    Serial.print(pitch_sensor_2);
-    Serial.print("\t");
-    Serial.print(roll_sensor_2);
-    Serial.print("\t");
+    // Serial.print(yaw_sensor_2);
+    // Serial.print("\t");
+    // Serial.print(pitch_sensor_2);
+    // Serial.print("\t");
+    // Serial.print(roll_sensor_2);
+    // Serial.print("\t");
 
 #endif
 
