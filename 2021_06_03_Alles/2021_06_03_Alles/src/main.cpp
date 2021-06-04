@@ -69,8 +69,7 @@
 ///////////////////////////////////
 
 // #define MANUAL_OFFSET
-#define PID_OFFSET // loop number einstellbar in globale Variablen - aktuell 15
-// #define MEANVALUE_OFFSET
+// #define PID_OFFSET // loop number einstellbar in globale Variablen - aktuell 15
 
 ///////////////////////////////////
 //////// FILTER DEFINES ///////////
@@ -115,7 +114,7 @@ int16_t Gyro_x_Sensor_2; // X-Achsen Drehraten Wert Sensor 2
 int16_t Gyro_y_Sensor_2; // Y-Achsen Drehraten Wert Sensor 2
 int16_t Gyro_z_Sensor_2; // Z-Achsen Drehraten Wert Sensor 2
 
-#ifdef MEANVALUE_OFFSET
+#ifdef COMPLEMENT_FILTER
 ///// Variablen für Mittelwert /////
 
 int16_t Acc_x_mean_Sensor_1;  // X-Achsen Beschleunigungs Mittelwert
@@ -163,21 +162,43 @@ uint8_t pidloop = 15;
 
 /// Sensor 1 ///
 unsigned long last_read_time_Sensor_1;
-float yaw_sensor_1 = 0;
-float pitch_sensor_1 = 0;
-float roll_sensor_1 = 0;
+float last_x_angle_Sensor_1; // These are the filtered angles
+float last_y_angle_Sensor_1;
+float last_z_angle_Sensor_1;
+float last_gyro_x_angle_Sensor_1; // Store the gyro angles to compare drift
+float last_gyro_y_angle_Sensor_1;
+float last_gyro_z_angle_Sensor_1;
+
 /// Sensor 2 ///
 unsigned long last_read_time_Sensor_2;
-float yaw_sensor_2 = 0;
-float pitch_sensor_2 = 0;
-float roll_sensor_2 = 0;
+float last_x_angle_Sensor_2; // These are the filtered angles
+float last_y_angle_Sensor_2;
+float last_z_angle_Sensor_2;
+float last_gyro_x_angle_Sensor_2; // Store the gyro angles to compare drift
+float last_gyro_y_angle_Sensor_2;
+float last_gyro_z_angle_Sensor_2;
+
+float base_x_gyro_Sensor_1 = 0;
+float base_y_gyro_Sensor_1 = 0;
+float base_z_gyro_Sensor_1 = 0;
+float base_x_accel_Sensor_1 = 0;
+float base_y_accel_Sensor_1 = 0;
+float base_z_accel_Sensor_1 = 0;
+
+float base_x_gyro_Sensor_2 = 0;
+float base_y_gyro_Sensor_2 = 0;
+float base_z_gyro_Sensor_2 = 0;
+float base_x_accel_Sensor_2 = 0;
+float base_y_accel_Sensor_2 = 0;
+float base_z_accel_Sensor_2 = 0;
+
 #endif
 
 //################################################################//
 //######################### Functions ############################//
 //################################################################//
 
-#ifdef MEANVALUE_OFFSET
+#ifdef COMPLEMENT_FILTER
 
 void calibrate_sensors()
 {
@@ -206,61 +227,90 @@ void calibrate_sensors()
     Acc_y_mean_Sensor_1 /= num_readings;
     Acc_z_mean_Sensor_1 /= num_readings;
 }
-#endif
 
-#ifdef COMPLEMENT_FILTER
-void ComplementaryFilter_Sensor_1(int16_t accData[3], int16_t gyrData[3], float *yaw, float *pitch, float *roll)
+void set_last_read_angle_data_Sensor_1(unsigned long time, float x, float y, float z, float x_gyro, float y_gyro, float z_gyro)
 {
-    float pitchAcc, rollAcc;
-    float dt = millis() - last_read_time_Sensor_1;
-
-    // Integrate the gyroscope data -> int(angularSpeed) = angle
-    *yaw += ((float)gyrData[2] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) / 1000;   // Winkel um z-Achse
-    *roll += ((float)gyrData[0] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) / 1000;  // Angle around the X-axis
-    *pitch -= ((float)gyrData[1] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) / 1000; // Angle around the Y-axis
-
-    accData[0] = (float)accData[0] / ACC_SENS_FACTOR_2; // Umrechnung mit Scale Faktor
-    accData[1] = (float)accData[1] / ACC_SENS_FACTOR_2;
-    accData[2] = (float)accData[2] / ACC_SENS_FACTOR_2;
-
-    // Compensate for drift with accelerometer data if !bullshit
-    // Sensitivity = -2 to 2 G at 16Bit -> 2G = 32768 && 0.5G = 8192
-    int forceMagnitudeApprox = abs(accData[0]) + abs(accData[1]) + abs(accData[2]);
-
-    // Turning around the X axis results in a vector on the Y-axis
-    rollAcc = atan(accData[1] / sqrt(pow(accData[0], 2) + pow(accData[3], 2))) * RADIANS_TO_DEGREES;
-    *roll = *roll * 0.98 + rollAcc * 0.02;
-
-    // Turning around the Y axis results in a vector on the X-axis
-    pitchAcc = atan(-1 * accData[0] / sqrt(pow(accData[1], 2) + pow(accData[3], 2))) * RADIANS_TO_DEGREES;
-    *pitch = *pitch * 0.98 + pitchAcc * 0.02;
+    last_read_time_Sensor_1 = time;
+    last_x_angle_Sensor_1 = x;
+    last_z_angle_Sensor_1 = y;
+    last_z_angle_Sensor_1 = z;
+    last_gyro_x_angle_Sensor_1 = x_gyro;
+    last_gyro_y_angle_Sensor_1 = y_gyro;
+    last_gyro_z_angle_Sensor_1 = z_gyro;
 }
 
-void ComplementaryFilter_Sensor_2(int16_t accData[3], int16_t gyrData[3], float *yaw, float *pitch, float *roll)
+void set_last_read_angle_data_Sensor_2(unsigned long time, float x, float y, float z, float x_gyro, float y_gyro, float z_gyro)
 {
-    float pitchAcc, rollAcc;
-
-    // Integrate the gyroscope data -> int(angularSpeed) = angle
-    *yaw += ((float)gyrData[2] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) / 1000;   // Winkel um z-Achse
-    *roll += ((float)gyrData[0] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) / 1000;  // Angle around the X-axis
-    *pitch -= ((float)gyrData[1] / GYRO_SENS_FACTOR_250) * (millis() - last_read_time_Sensor_1) / 1000; // Angle around the Y-axis
-
-    // accData[0] = accData[0] / ACC_SENS_FACTOR_2; // Umrechnung mit Scale Faktor
-    // accData[1] = accData[1] / ACC_SENS_FACTOR_2;
-    // accData[2] = accData[2] / ACC_SENS_FACTOR_2;
-
-    // Compensate for drift with accelerometer data if !bullshit
-    // Sensitivity = -2 to 2 G at 16Bit -> 2G = 32768 && 0.5G = 8192
-    int forceMagnitudeApprox = abs(accData[0]) + abs(accData[1]) + abs(accData[2]);
-
-    // Turning around the X axis results in a vector on the Y-axis
-    rollAcc = atan(accData[1] / sqrt(pow(accData[0], 2) + pow(accData[3], 2))) * RADIANS_TO_DEGREES;
-    *roll = *roll * 0.98 + rollAcc * 0.02;
-
-    // Turning around the Y axis results in a vector on the X-axis
-    pitchAcc = atan(-1 * accData[0] / sqrt(pow(accData[1], 2) + pow(accData[3], 2))) * RADIANS_TO_DEGREES;
-    *pitch = *pitch * 0.98 + pitchAcc * 0.02;
+    last_read_time_Sensor_2 = time;
+    last_x_angle_Sensor_2 = x;
+    last_y_angle_Sensor_2 = y;
+    last_z_angle_Sensor_2 = z;
+    last_gyro_x_angle_Sensor_2 = x_gyro;
+    last_gyro_y_angle_Sensor_2 = y_gyro;
+    last_gyro_z_angle_Sensor_2 = z_gyro;
 }
+
+void calibrate_sensor_1()
+{
+    int num_readings = 10;
+
+    // Discard the first reading (don't know if this is needed or
+    // not, however, it won't hurt.)
+    Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
+    // Read and average the raw values
+    for (int i = 0; i < num_readings; i++)
+    {
+        Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
+        base_x_gyro_Sensor_1 += Gyro_x_Sensor_1;
+        base_y_gyro_Sensor_1 += Gyro_y_Sensor_1;
+        base_z_gyro_Sensor_1 += Gyro_z_Sensor_1;
+        base_x_accel_Sensor_1 += Acc_x_Sensor_1;
+        base_y_accel_Sensor_1 += Acc_y_Sensor_1;
+        base_z_accel_Sensor_1 += Acc_z_Sensor_1;
+    }
+
+    base_x_gyro_Sensor_1 /= num_readings;
+    base_y_gyro_Sensor_1 /= num_readings;
+    base_z_gyro_Sensor_1 /= num_readings;
+    base_x_accel_Sensor_1 /= num_readings;
+    base_y_accel_Sensor_1 /= num_readings;
+    base_z_accel_Sensor_1 /= num_readings;
+}
+
+void calibrate_sensor_2()
+{
+    int num_readings = 10;
+
+    // Discard the first reading (don't know if this is needed or
+    // not, however, it won't hurt.)
+    Sensor_2.getMotion6(&Acc_x_Sensor_2, &Acc_y_Sensor_2, &Acc_z_Sensor_2, &Gyro_x_Sensor_2, &Gyro_y_Sensor_2, &Gyro_z_Sensor_2);
+    // Read and average the raw values
+    for (int i = 0; i < num_readings; i++)
+    {
+        Sensor_2.getMotion6(&Acc_x_Sensor_2, &Acc_y_Sensor_2, &Acc_z_Sensor_2, &Gyro_x_Sensor_2, &Gyro_y_Sensor_2, &Gyro_z_Sensor_2);
+        base_x_gyro_Sensor_2 += Gyro_x_Sensor_2;
+        base_y_gyro_Sensor_2 += Gyro_y_Sensor_2;
+        base_z_gyro_Sensor_2 += Gyro_z_Sensor_2;
+        base_x_accel_Sensor_2 += Acc_x_Sensor_2;
+        base_y_accel_Sensor_2 += Acc_y_Sensor_2;
+        base_z_accel_Sensor_2 += Acc_z_Sensor_2;
+    }
+
+    base_x_gyro_Sensor_2 /= num_readings;
+    base_y_gyro_Sensor_2 /= num_readings;
+    base_z_gyro_Sensor_2 /= num_readings;
+    base_x_accel_Sensor_2 /= num_readings;
+    base_y_accel_Sensor_2 /= num_readings;
+    base_z_accel_Sensor_2 /= num_readings;
+}
+
+inline unsigned long get_last_time_Sensor_1() { return last_read_time_Sensor_1; }
+inline float get_last_x_angle_Sensor_1() { return last_x_angle_Sensor_1; }
+inline float get_last_y_angle_Sensor_1() { return last_y_angle_Sensor_1; }
+inline float get_last_z_angle_Sensor_1() { return last_z_angle_Sensor_1; }
+inline float get_last_gyro_x_angle_Sensor_1() { return last_gyro_x_angle_Sensor_1; }
+inline float get_last_gyro_y_angle_Sensor_1() { return last_gyro_y_angle_Sensor_1; }
+inline float get_last_gyro_z_angle_Sensor_1() { return last_gyro_z_angle_Sensor_1; }
 
 #endif
 
@@ -355,16 +405,16 @@ void setup()
 // Sensor_2.setZAccelOffset(1144);
 #endif
 
-#ifdef PID_OFFSET
     ////////////////////////////////////////////
     ///// Sensor 1 PID Regler Kalibrierung /////
     ////////////////////////////////////////////
 
     if (DMP_Status_Int_Sensor_1 == 0)
     {
-
+#ifdef PID_OFFSET
         Sensor_1.CalibrateAccel(pidloop); // Starten des PID Reglers
         Sensor_1.CalibrateGyro(pidloop);
+#endif
         Serial.println();
         Sensor_1.PrintActiveOffsets(); // Zeige ermittelte Offset Werte
 
@@ -386,8 +436,10 @@ void setup()
 
     if (DMP_Status_Int_Sensor_2 == 0)
     {
+#ifdef PID_OFFSET
         Sensor_2.CalibrateAccel(pidloop); // Starten des PID Reglers
         Sensor_2.CalibrateGyro(pidloop);
+#endif
         Serial.println();
         Sensor_2.PrintActiveOffsets(); // Zeige ermittelte Offset Werte
 
@@ -402,14 +454,15 @@ void setup()
     {
         Serial.println("Initializing DMP Sensor 2 failed -> press RESET");
     }
-#endif
 
 #ifdef COMPLEMENT_FILTER
     ///////////////////////////////
     ///// Komplementär Filter /////
     ///////////////////////////////
-    last_read_time_Sensor_1 = millis();
-    last_read_time_Sensor_2 = millis();
+    calibrate_sensor_1();
+    calibrate_sensor_2();
+    set_last_read_angle_data_Sensor_1(millis(), 0, 0, 0, 0, 0, 0);
+    set_last_read_angle_data_Sensor_2(millis(), 0, 0, 0, 0, 0, 0);
 
 #endif
 
@@ -562,42 +615,45 @@ void loop()
 
     Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1); // Liest die entsprechenden Register aus per I2C read()
     Sensor_2.getMotion6(&Acc_x_Sensor_2, &Acc_y_Sensor_2, &Acc_z_Sensor_2, &Gyro_x_Sensor_2, &Gyro_y_Sensor_2, &Gyro_z_Sensor_2);
-    int16_t Acc_Array_Sensor_1[3] = {Acc_x_Sensor_1, Acc_y_Sensor_1, Acc_z_Sensor_1};
-    int16_t Acc_Array_Sensor_2[3] = {Acc_x_Sensor_2, Acc_y_Sensor_2, Acc_z_Sensor_2};
-    int16_t Gyro_Array_Sensor_1[3] = {Gyro_x_Sensor_1, Gyro_y_Sensor_1, Gyro_z_Sensor_1};
-    int16_t Gyro_Array_Sensor_2[3] = {Gyro_x_Sensor_2, Gyro_y_Sensor_2, Gyro_z_Sensor_2};
+    unsigned long t_now = millis();
 
-    //    ComplementaryFilter_Sensor_1(Acc_Array_Sensor_1, Gyro_Array_Sensor_1, &yaw_sensor_1, &pitch_sensor_1, &roll_sensor_1);
-    //     ComplementaryFilter_Sensor_2(Acc_Array_Sensor_2, Gyro_Array_Sensor_2, &yaw_sensor_2, &pitch_sensor_2, &roll_sensor_2);
+    // Remove offsets and scale gyro data
+    float gyro_x_Sensor_1 = (Gyro_x_Sensor_1 - base_x_gyro_Sensor_1) / GYRO_SENS_FACTOR_250;
+    float gyro_y_Sensor_1 = (Gyro_y_Sensor_1 - base_y_gyro_Sensor_1) / GYRO_SENS_FACTOR_250;
+    float gyro_z_Sensor_1 = (Gyro_z_Sensor_1 - base_z_gyro_Sensor_1) / GYRO_SENS_FACTOR_250;
+    float accel_x_Sensor_1 = Acc_x_Sensor_1; // - base_x_accel;
+    float accel_y_Sensor_1 = Acc_y_Sensor_1; // - base_y_accel;
+    float accel_z_Sensor_1 = Acc_z_Sensor_1; // - base_z_accel;
 
-    float Gyro_x_Scaled_Sensor_1 = Gyro_x_Sensor_1 / GYRO_SENS_FACTOR_250;
-    float Gyro_y_Scaled_Sensor_1 = Gyro_y_Sensor_1 / GYRO_SENS_FACTOR_250;
-    float Gyro_z_Scaled_Sensor_1 = Gyro_z_Sensor_1 / GYRO_SENS_FACTOR_250;
+    float accel_angle_y_Sensor_1 = atan(-1 * accel_x_Sensor_1 / sqrt(pow(accel_y_Sensor_1, 2) + pow(accel_z_Sensor_1, 2))) * RADIANS_TO_DEGREES;
+    float accel_angle_x_Sensor_1 = atan(accel_y_Sensor_1 / sqrt(pow(accel_x_Sensor_1, 2) + pow(accel_z_Sensor_1, 2))) * RADIANS_TO_DEGREES;
+    float accel_angle_z_Sensor_1 = 0;
 
-    roll_sensor_1 = roll_sensor_1 + (Gyro_x_Scaled_Sensor_1 * (millis() - last_read_time_Sensor_1) / 1000) * RADIANS_TO_DEGREES;
-    pitch_sensor_1 = pitch_sensor_1 + (Gyro_y_Scaled_Sensor_1 * (millis() - last_read_time_Sensor_1) / 1000) * RADIANS_TO_DEGREES;
+    // Compute the (filtered) gyro angles
+    float dt = (t_now - get_last_time_Sensor_1()) / 1000.0;
+    float gyro_angle_x_Sensor_1 = gyro_x_Sensor_1 * dt + get_last_x_angle_Sensor_1();
+    float gyro_angle_y_Sensor_1 = gyro_y_Sensor_1 * dt + get_last_y_angle_Sensor_1();
+    float gyro_angle_z_Sensor_1 = gyro_z_Sensor_1 * dt + get_last_z_angle_Sensor_1();
 
-    last_read_time_Sensor_1 = millis();
-    last_read_time_Sensor_2 = millis();
+    // Compute the drifting gyro angles
+    float unfiltered_gyro_angle_x_Sensor_1 = gyro_x_Sensor_1 * dt + get_last_gyro_x_angle_Sensor_1();
+    float unfiltered_gyro_angle_y_Sensor_1 = gyro_y_Sensor_1 * dt + get_last_gyro_y_angle_Sensor_1();
+    float unfiltered_gyro_angle_z_Sensor_1 = gyro_z_Sensor_1 * dt + get_last_gyro_z_angle_Sensor_1();
 
-    Acc_x_Sensor_1 = Acc_x_Sensor_1;
-    Acc_y_Sensor_1 = Acc_y_Sensor_1;
-    Acc_z_Sensor_1 = Acc_z_Sensor_1;
-
-    float Acc_angle_y_Sensor_1 = atan2(Acc_y_Sensor_1, Acc_z_Sensor_1) * RADIANS_TO_DEGREES;
-    float Acc_angle_x_Sensor_1 = atan2(Acc_x_Sensor_1, Acc_z_Sensor_1) * RADIANS_TO_DEGREES;
-    float Acc_angle_y_Sensor_2 = atan2(Acc_y_Sensor_2, Acc_z_Sensor_2) * RADIANS_TO_DEGREES;
-    float Acc_angle_x_Sensor_2 = atan2(Acc_x_Sensor_2, Acc_z_Sensor_2) * RADIANS_TO_DEGREES;
-
-    float pitch_filtered_sensor_1 = 0.96 * (pitch_sensor_1) + 0.04 * Acc_angle_y_Sensor_1;
-    float roll_filtered_sensor_1 = 0.96 * (roll_sensor_1) + 0.04 * Acc_angle_x_Sensor_1;
+    // Apply the complementary filter to figure out the change in angle - choice of alpha is
+    // estimated now.  Alpha depends on the sampling rate...
+    const float alpha = 0.96;
+    float angle_x_Sensor_1 = alpha * gyro_angle_x_Sensor_1 + (1.0 - alpha) * accel_angle_x_Sensor_1;
+    float angle_y_Sensor_1 = alpha * gyro_angle_y_Sensor_1 + (1.0 - alpha) * accel_angle_y_Sensor_1;
+    float angle_z_Sensor_1 = gyro_angle_z_Sensor_1; //Accelerometer doesn't give z-angle
 
     // Serial.print(yaw_sensor_1);
     // Serial.print("\t");
-    Serial.print(pitch_sensor_1);
+    Serial.print(angle_x_Sensor_1, 4);
     Serial.print("\t");
-    Serial.print(roll_sensor_1);
+    Serial.print(angle_y_Sensor_1, 4);
     Serial.print("\t");
+    set_last_read_angle_data_Sensor_1(t_now, angle_x_Sensor_1, angle_y_Sensor_1, angle_z_Sensor_1, unfiltered_gyro_angle_x_Sensor_1, unfiltered_gyro_angle_y_Sensor_1, unfiltered_gyro_angle_z_Sensor_1);
 
     // Serial.print(yaw_sensor_2);
     // Serial.print("\t");
