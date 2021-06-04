@@ -28,6 +28,7 @@
 #include "I2Cdev.h"                         // Library für I2C Sensor MPU6050 und anderen Sensoren
 #include "MPU6050_6Axis_MotionApps_V6_12.h" // MPU6050 Library von I2CDev
 #include "Wire.h"                           // Nötig für I2C Bus
+#include "GeekMum_Complement_Filter.h"
 
 //################################################################//
 //########################## Defines #############################//
@@ -70,14 +71,14 @@
 ///////////////////////////////////
 
 // #define MANUAL_OFFSET
-#define PID_OFFSET // loop number einstellbar in globale Variablen - aktuell 15
+// #define PID_OFFSET // loop number einstellbar in globale Variablen - aktuell 15
 
 ///////////////////////////////////
 //////// FILTER DEFINES ///////////
 ///////////////////////////////////
 
-// #define COMPLEMENT_FILTER
-#define MADGWICK_FILTER
+#define COMPLEMENT_FILTER
+// #define MADGWICK_FILTER
 
 //################################################################//
 //###################### globale Variablen #######################//
@@ -162,36 +163,36 @@ uint8_t pidloop = 15;
 ///// Last Values for Angle Integration /////
 
 /// Sensor 1 ///
-unsigned long last_read_time_Sensor_1;
-float last_x_angle_Sensor_1; // These are the filtered angles
-float last_y_angle_Sensor_1;
-float last_z_angle_Sensor_1;
-float last_gyro_x_angle_Sensor_1; // Store the gyro angles to compare drift
-float last_gyro_y_angle_Sensor_1;
-float last_gyro_z_angle_Sensor_1;
+// unsigned long last_read_time_Sensor_1;
+// float last_x_angle_Sensor_1; // These are the filtered angles
+// float last_y_angle_Sensor_1;
+// float last_z_angle_Sensor_1;
+// float last_gyro_x_angle_Sensor_1; // Store the gyro angles to compare drift
+// float last_gyro_y_angle_Sensor_1;
+// float last_gyro_z_angle_Sensor_1;
 
 /// Sensor 2 ///
-unsigned long last_read_time_Sensor_2;
-float last_x_angle_Sensor_2; // These are the filtered angles
-float last_y_angle_Sensor_2;
-float last_z_angle_Sensor_2;
-float last_gyro_x_angle_Sensor_2; // Store the gyro angles to compare drift
-float last_gyro_y_angle_Sensor_2;
-float last_gyro_z_angle_Sensor_2;
+// unsigned long last_read_time_Sensor_2;
+// float last_x_angle_Sensor_2; // These are the filtered angles
+// float last_y_angle_Sensor_2;
+// float last_z_angle_Sensor_2;
+// float last_gyro_x_angle_Sensor_2; // Store the gyro angles to compare drift
+// float last_gyro_y_angle_Sensor_2;
+// float last_gyro_z_angle_Sensor_2;
 
-float base_x_gyro_Sensor_1 = 0;
-float base_y_gyro_Sensor_1 = 0;
-float base_z_gyro_Sensor_1 = 0;
-float base_x_accel_Sensor_1 = 0;
-float base_y_accel_Sensor_1 = 0;
-float base_z_accel_Sensor_1 = 0;
+// float base_x_gyro_Sensor_1 = 0;
+// float base_y_gyro_Sensor_1 = 0;
+// float base_z_gyro_Sensor_1 = 0;
+// float base_x_accel_Sensor_1 = 0;
+// float base_y_accel_Sensor_1 = 0;
+// float base_z_accel_Sensor_1 = 0;
 
-float base_x_gyro_Sensor_2 = 0;
-float base_y_gyro_Sensor_2 = 0;
-float base_z_gyro_Sensor_2 = 0;
-float base_x_accel_Sensor_2 = 0;
-float base_y_accel_Sensor_2 = 0;
-float base_z_accel_Sensor_2 = 0;
+// float base_x_gyro_Sensor_2 = 0;
+// float base_y_gyro_Sensor_2 = 0;
+// float base_z_gyro_Sensor_2 = 0;
+// float base_x_accel_Sensor_2 = 0;
+// float base_y_accel_Sensor_2 = 0;
+// float base_z_accel_Sensor_2 = 0;
 
 #endif
 
@@ -218,117 +219,117 @@ float roll_Sensor_1;
 
 #ifdef COMPLEMENT_FILTER
 
-void calibrate_sensors()
-{
-    int num_readings = 10;
+// void calibrate_sensors()
+// {
+//     int num_readings = 10;
 
-    // Discard the first reading (don't know if this is needed or
-    // not, however, it won't hurt.)
-    Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
+//     // Discard the first reading (don't know if this is needed or
+//     // not, however, it won't hurt.)
+//     Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
 
-    // Read and average the raw values
-    for (int i = 0; i < num_readings; i++)
-    {
-        Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
-        Gyro_x_mean_Sensor_1 += Gyro_x_Sensor_1;
-        Gyro_y_mean_Sensor_1 += Gyro_y_Sensor_1;
-        Gyro_z_mean_Sensor_1 += Gyro_z_Sensor_1;
-        Acc_x_mean_Sensor_1 += Acc_x_Sensor_1;
-        Acc_y_mean_Sensor_1 += Acc_y_Sensor_1;
-        Acc_z_mean_Sensor_1 += Acc_z_Sensor_1;
-    }
+//     // Read and average the raw values
+//     for (int i = 0; i < num_readings; i++)
+//     {
+//         Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
+//         Gyro_x_mean_Sensor_1 += Gyro_x_Sensor_1;
+//         Gyro_y_mean_Sensor_1 += Gyro_y_Sensor_1;
+//         Gyro_z_mean_Sensor_1 += Gyro_z_Sensor_1;
+//         Acc_x_mean_Sensor_1 += Acc_x_Sensor_1;
+//         Acc_y_mean_Sensor_1 += Acc_y_Sensor_1;
+//         Acc_z_mean_Sensor_1 += Acc_z_Sensor_1;
+//     }
 
-    Gyro_x_mean_Sensor_1 /= num_readings;
-    Gyro_y_mean_Sensor_1 /= num_readings;
-    Gyro_z_mean_Sensor_1 /= num_readings;
-    Acc_x_mean_Sensor_1 /= num_readings;
-    Acc_y_mean_Sensor_1 /= num_readings;
-    Acc_z_mean_Sensor_1 /= num_readings;
-}
+//     Gyro_x_mean_Sensor_1 /= num_readings;
+//     Gyro_y_mean_Sensor_1 /= num_readings;
+//     Gyro_z_mean_Sensor_1 /= num_readings;
+//     Acc_x_mean_Sensor_1 /= num_readings;
+//     Acc_y_mean_Sensor_1 /= num_readings;
+//     Acc_z_mean_Sensor_1 /= num_readings;
+// }
 
-void set_last_read_angle_data_Sensor_1(unsigned long time, float x, float y, float z, float x_gyro, float y_gyro, float z_gyro)
-{
-    last_read_time_Sensor_1 = time;
-    last_x_angle_Sensor_1 = x;
-    last_z_angle_Sensor_1 = y;
-    last_z_angle_Sensor_1 = z;
-    last_gyro_x_angle_Sensor_1 = x_gyro;
-    last_gyro_y_angle_Sensor_1 = y_gyro;
-    last_gyro_z_angle_Sensor_1 = z_gyro;
-}
+// void set_last_read_angle_data_Sensor_1(unsigned long time, float x, float y, float z, float x_gyro, float y_gyro, float z_gyro)
+// {
+//     last_read_time_Sensor_1 = time;
+//     last_x_angle_Sensor_1 = x;
+//     last_z_angle_Sensor_1 = y;
+//     last_z_angle_Sensor_1 = z;
+//     last_gyro_x_angle_Sensor_1 = x_gyro;
+//     last_gyro_y_angle_Sensor_1 = y_gyro;
+//     last_gyro_z_angle_Sensor_1 = z_gyro;
+// }
 
-void set_last_read_angle_data_Sensor_2(unsigned long time, float x, float y, float z, float x_gyro, float y_gyro, float z_gyro)
-{
-    last_read_time_Sensor_2 = time;
-    last_x_angle_Sensor_2 = x;
-    last_y_angle_Sensor_2 = y;
-    last_z_angle_Sensor_2 = z;
-    last_gyro_x_angle_Sensor_2 = x_gyro;
-    last_gyro_y_angle_Sensor_2 = y_gyro;
-    last_gyro_z_angle_Sensor_2 = z_gyro;
-}
+// void set_last_read_angle_data_Sensor_2(unsigned long time, float x, float y, float z, float x_gyro, float y_gyro, float z_gyro)
+// {
+//     last_read_time_Sensor_2 = time;
+//     last_x_angle_Sensor_2 = x;
+//     last_y_angle_Sensor_2 = y;
+//     last_z_angle_Sensor_2 = z;
+//     last_gyro_x_angle_Sensor_2 = x_gyro;
+//     last_gyro_y_angle_Sensor_2 = y_gyro;
+//     last_gyro_z_angle_Sensor_2 = z_gyro;
+// }
 
-void calibrate_sensor_1()
-{
-    int num_readings = 10;
+// void calibrate_sensor_1()
+// {
+//     int num_readings = 10;
 
-    // Discard the first reading (don't know if this is needed or
-    // not, however, it won't hurt.)
-    Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
-    // Read and average the raw values
-    for (int i = 0; i < num_readings; i++)
-    {
-        Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
-        base_x_gyro_Sensor_1 += Gyro_x_Sensor_1;
-        base_y_gyro_Sensor_1 += Gyro_y_Sensor_1;
-        base_z_gyro_Sensor_1 += Gyro_z_Sensor_1;
-        base_x_accel_Sensor_1 += Acc_x_Sensor_1;
-        base_y_accel_Sensor_1 += Acc_y_Sensor_1;
-        base_z_accel_Sensor_1 += Acc_z_Sensor_1;
-    }
+//     // Discard the first reading (don't know if this is needed or
+//     // not, however, it won't hurt.)
+//     Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
+//     // Read and average the raw values
+//     for (int i = 0; i < num_readings; i++)
+//     {
+//         Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
+//         base_x_gyro_Sensor_1 += Gyro_x_Sensor_1;
+//         base_y_gyro_Sensor_1 += Gyro_y_Sensor_1;
+//         base_z_gyro_Sensor_1 += Gyro_z_Sensor_1;
+//         base_x_accel_Sensor_1 += Acc_x_Sensor_1;
+//         base_y_accel_Sensor_1 += Acc_y_Sensor_1;
+//         base_z_accel_Sensor_1 += Acc_z_Sensor_1;
+//     }
 
-    base_x_gyro_Sensor_1 /= num_readings;
-    base_y_gyro_Sensor_1 /= num_readings;
-    base_z_gyro_Sensor_1 /= num_readings;
-    base_x_accel_Sensor_1 /= num_readings;
-    base_y_accel_Sensor_1 /= num_readings;
-    base_z_accel_Sensor_1 /= num_readings;
-}
+//     base_x_gyro_Sensor_1 /= num_readings;
+//     base_y_gyro_Sensor_1 /= num_readings;
+//     base_z_gyro_Sensor_1 /= num_readings;
+//     base_x_accel_Sensor_1 /= num_readings;
+//     base_y_accel_Sensor_1 /= num_readings;
+//     base_z_accel_Sensor_1 /= num_readings;
+// }
 
-void calibrate_sensor_2()
-{
-    int num_readings = 10;
+// void calibrate_sensor_2()
+// {
+//     int num_readings = 10;
 
-    // Discard the first reading (don't know if this is needed or
-    // not, however, it won't hurt.)
-    Sensor_2.getMotion6(&Acc_x_Sensor_2, &Acc_y_Sensor_2, &Acc_z_Sensor_2, &Gyro_x_Sensor_2, &Gyro_y_Sensor_2, &Gyro_z_Sensor_2);
-    // Read and average the raw values
-    for (int i = 0; i < num_readings; i++)
-    {
-        Sensor_2.getMotion6(&Acc_x_Sensor_2, &Acc_y_Sensor_2, &Acc_z_Sensor_2, &Gyro_x_Sensor_2, &Gyro_y_Sensor_2, &Gyro_z_Sensor_2);
-        base_x_gyro_Sensor_2 += Gyro_x_Sensor_2;
-        base_y_gyro_Sensor_2 += Gyro_y_Sensor_2;
-        base_z_gyro_Sensor_2 += Gyro_z_Sensor_2;
-        base_x_accel_Sensor_2 += Acc_x_Sensor_2;
-        base_y_accel_Sensor_2 += Acc_y_Sensor_2;
-        base_z_accel_Sensor_2 += Acc_z_Sensor_2;
-    }
+//     // Discard the first reading (don't know if this is needed or
+//     // not, however, it won't hurt.)
+//     Sensor_2.getMotion6(&Acc_x_Sensor_2, &Acc_y_Sensor_2, &Acc_z_Sensor_2, &Gyro_x_Sensor_2, &Gyro_y_Sensor_2, &Gyro_z_Sensor_2);
+//     // Read and average the raw values
+//     for (int i = 0; i < num_readings; i++)
+//     {
+//         Sensor_2.getMotion6(&Acc_x_Sensor_2, &Acc_y_Sensor_2, &Acc_z_Sensor_2, &Gyro_x_Sensor_2, &Gyro_y_Sensor_2, &Gyro_z_Sensor_2);
+//         base_x_gyro_Sensor_2 += Gyro_x_Sensor_2;
+//         base_y_gyro_Sensor_2 += Gyro_y_Sensor_2;
+//         base_z_gyro_Sensor_2 += Gyro_z_Sensor_2;
+//         base_x_accel_Sensor_2 += Acc_x_Sensor_2;
+//         base_y_accel_Sensor_2 += Acc_y_Sensor_2;
+//         base_z_accel_Sensor_2 += Acc_z_Sensor_2;
+//     }
 
-    base_x_gyro_Sensor_2 /= num_readings;
-    base_y_gyro_Sensor_2 /= num_readings;
-    base_z_gyro_Sensor_2 /= num_readings;
-    base_x_accel_Sensor_2 /= num_readings;
-    base_y_accel_Sensor_2 /= num_readings;
-    base_z_accel_Sensor_2 /= num_readings;
-}
+//     base_x_gyro_Sensor_2 /= num_readings;
+//     base_y_gyro_Sensor_2 /= num_readings;
+//     base_z_gyro_Sensor_2 /= num_readings;
+//     base_x_accel_Sensor_2 /= num_readings;
+//     base_y_accel_Sensor_2 /= num_readings;
+//     base_z_accel_Sensor_2 /= num_readings;
+// }
 
-inline unsigned long get_last_time_Sensor_1() { return last_read_time_Sensor_1; }
-inline float get_last_x_angle_Sensor_1() { return last_x_angle_Sensor_1; }
-inline float get_last_y_angle_Sensor_1() { return last_y_angle_Sensor_1; }
-inline float get_last_z_angle_Sensor_1() { return last_z_angle_Sensor_1; }
-inline float get_last_gyro_x_angle_Sensor_1() { return last_gyro_x_angle_Sensor_1; }
-inline float get_last_gyro_y_angle_Sensor_1() { return last_gyro_y_angle_Sensor_1; }
-inline float get_last_gyro_z_angle_Sensor_1() { return last_gyro_z_angle_Sensor_1; }
+// inline unsigned long get_last_time_Sensor_1() { return last_read_time_Sensor_1; }
+// inline float get_last_x_angle_Sensor_1() { return last_x_angle_Sensor_1; }
+// inline float get_last_y_angle_Sensor_1() { return last_y_angle_Sensor_1; }
+// inline float get_last_z_angle_Sensor_1() { return last_z_angle_Sensor_1; }
+// inline float get_last_gyro_x_angle_Sensor_1() { return last_gyro_x_angle_Sensor_1; }
+// inline float get_last_gyro_y_angle_Sensor_1() { return last_gyro_y_angle_Sensor_1; }
+// inline float get_last_gyro_z_angle_Sensor_1() { return last_gyro_z_angle_Sensor_1; }
 
 #endif
 
@@ -569,8 +570,8 @@ void setup()
     ///////////////////////////////
     ///// Komplementär Filter /////
     ///////////////////////////////
-    calibrate_sensor_1();
-    calibrate_sensor_2();
+    calibrate_Sensor_1();
+    calibrate_Sensor_2();
     set_last_read_angle_data_Sensor_1(millis(), 0, 0, 0, 0, 0, 0);
     set_last_read_angle_data_Sensor_2(millis(), 0, 0, 0, 0, 0, 0);
 
@@ -722,18 +723,23 @@ void loop()
     /////////////////////////////////////////////
     //////////// Complement Filter //////////////
     /////////////////////////////////////////////
+    accel_t_gyro_union accel_t_gyro_Sensor_1;
+    accel_t_gyro_union accel_t_gyro_Sensor_2;
 
-    Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1); // Liest die entsprechenden Register aus per I2C read()
-    Sensor_2.getMotion6(&Acc_x_Sensor_2, &Acc_y_Sensor_2, &Acc_z_Sensor_2, &Gyro_x_Sensor_2, &Gyro_y_Sensor_2, &Gyro_z_Sensor_2);
+    // Read the raw values.
+    read_gyro_accel_vals((uint8_t *)&accel_t_gyro_Sensor_1);
+    read_gyro_accel_vals((uint8_t *)&accel_t_gyro_Sensor_2);
+
     unsigned long t_now = millis();
+    float FS_SEL = 131;
 
-    // Remove offsets and scale gyro data
-    float gyro_x_Sensor_1 = (Gyro_x_Sensor_1 - base_x_gyro_Sensor_1) / GYRO_SENS_FACTOR_250;
-    float gyro_y_Sensor_1 = (Gyro_y_Sensor_1 - base_y_gyro_Sensor_1) / GYRO_SENS_FACTOR_250;
-    float gyro_z_Sensor_1 = (Gyro_z_Sensor_1 - base_z_gyro_Sensor_1) / GYRO_SENS_FACTOR_250;
-    float accel_x_Sensor_1 = Acc_x_Sensor_1; // - base_x_accel;
-    float accel_y_Sensor_1 = Acc_y_Sensor_1; // - base_y_accel;
-    float accel_z_Sensor_1 = Acc_z_Sensor_1; // - base_z_accel;
+    float gyro_x_Sensor_1 = (accel_t_gyro_Sensor_1.value.x_gyro - base_x_gyro_Sensor_1) / FS_SEL;
+    float gyro_y_Sensor_1 = (accel_t_gyro_Sensor_1.value.y_gyro - base_y_gyro_Sensor_1) / FS_SEL;
+    float gyro_z_Sensor_1 = (accel_t_gyro_Sensor_1.value.z_gyro - base_z_gyro_Sensor_1) / FS_SEL;
+
+    float accel_x_Sensor_1 = accel_t_gyro_Sensor_1.value.x_accel;
+    float accel_y_Sensor_1 = accel_t_gyro_Sensor_1.value.y_accel;
+    float accel_z_Sensor_1 = accel_t_gyro_Sensor_1.value.z_accel;
 
     float accel_angle_y_Sensor_1 = atan(-1 * accel_x_Sensor_1 / sqrt(pow(accel_y_Sensor_1, 2) + pow(accel_z_Sensor_1, 2))) * RADIANS_TO_DEGREES;
     float accel_angle_x_Sensor_1 = atan(accel_y_Sensor_1 / sqrt(pow(accel_x_Sensor_1, 2) + pow(accel_z_Sensor_1, 2))) * RADIANS_TO_DEGREES;
@@ -752,18 +758,25 @@ void loop()
 
     // Apply the complementary filter to figure out the change in angle - choice of alpha is
     // estimated now.  Alpha depends on the sampling rate...
-    const float alpha = 0.96;
+    float alpha = 0.96;
     float angle_x_Sensor_1 = alpha * gyro_angle_x_Sensor_1 + (1.0 - alpha) * accel_angle_x_Sensor_1;
     float angle_y_Sensor_1 = alpha * gyro_angle_y_Sensor_1 + (1.0 - alpha) * accel_angle_y_Sensor_1;
     float angle_z_Sensor_1 = gyro_angle_z_Sensor_1; //Accelerometer doesn't give z-angle
 
+    set_last_read_angle_data_Sensor_1(t_now, angle_x_Sensor_1, angle_y_Sensor_1, angle_z_Sensor_1, unfiltered_gyro_angle_x_Sensor_1, unfiltered_gyro_angle_y_Sensor_1, unfiltered_gyro_angle_z_Sensor_1);
+    // set_last_read_angle_data_Sensor_2(t_now, angle_x_Sensor_2, angle_y_Sensor_2, angle_z_Sensor_2, unfiltered_gyro_angle_x_Sensor_2, unfiltered_gyro_angle_y_Sensor_2, unfiltered_gyro_angle_z_Sensor_2);
+
     // Serial.print(yaw_sensor_1);
     // Serial.print("\t");
-    Serial.print(angle_x_Sensor_1, 4);
+
+    Serial.print(F("#FIL YPR:")); //Filtered angle
     Serial.print("\t");
-    Serial.print(angle_y_Sensor_1, 4);
+    Serial.print(angle_z_Sensor_1, 2);
     Serial.print("\t");
-    set_last_read_angle_data_Sensor_1(t_now, angle_x_Sensor_1, angle_y_Sensor_1, angle_z_Sensor_1, unfiltered_gyro_angle_x_Sensor_1, unfiltered_gyro_angle_y_Sensor_1, unfiltered_gyro_angle_z_Sensor_1);
+    Serial.print(angle_y_Sensor_1, 2);
+    Serial.print("\t");
+    Serial.print(angle_x_Sensor_1, 2);
+    Serial.println(F(""));
 
     // Serial.print(yaw_sensor_2);
     // Serial.print("\t");
@@ -771,7 +784,7 @@ void loop()
     // Serial.print("\t");
     // Serial.print(roll_sensor_2);
     // Serial.print("\t");
-
+    delay(5);
 #endif
 
 #ifdef MADGWICK_FILTER
