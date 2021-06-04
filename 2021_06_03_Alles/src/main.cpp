@@ -52,7 +52,8 @@
 /////////////////////////////////////////
 //////// Mathematische DEFINES //////////
 /////////////////////////////////////////
-#define RADIANS_TO_DEGREES 57.2958 //180/3.14159
+#define RADIANS_TO_DEGREES 57.2958  //180/3.14159
+#define DEGREE_TO_RADIANS 0.0174533 //3.14159/180
 #define M_PI 3.14159265359
 
 ///////////////////////////////////
@@ -69,14 +70,14 @@
 ///////////////////////////////////
 
 // #define MANUAL_OFFSET
-// #define PID_OFFSET // loop number einstellbar in globale Variablen - aktuell 15
+#define PID_OFFSET // loop number einstellbar in globale Variablen - aktuell 15
 
 ///////////////////////////////////
 //////// FILTER DEFINES ///////////
 ///////////////////////////////////
 
-#define COMPLEMENT_FILTER
-//#define MADGWICK_FILTER
+// #define COMPLEMENT_FILTER
+#define MADGWICK_FILTER
 
 //################################################################//
 //###################### globale Variablen #######################//
@@ -192,6 +193,23 @@ float base_x_accel_Sensor_2 = 0;
 float base_y_accel_Sensor_2 = 0;
 float base_z_accel_Sensor_2 = 0;
 
+#endif
+
+#ifdef MADGWICK_FILTER
+float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};          // vector to hold quaternion
+float GyroMeasDrift = PI * (2.0f / 180.0f);     // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
+float GyroMeasError = PI * (40.0f / 180.0f);    // gyroscope measurement error in rads/s (start at 60 deg/s), then reduce after ~10 s to 3
+float beta = sqrt(3.0f / 4.0f) * GyroMeasError; // compute beta
+float zeta = sqrt(3.0f / 4.0f) * GyroMeasDrift; // compute zeta, the other free parameter in the Madgwick scheme usually set to a small or zero value
+float deltat = 0.0f;                            // integration interval for both filter schemes
+uint32_t lastUpdate = 0;
+uint32_t firstUpdate = 0; // used to calculate integration interval
+uint32_t Now = 0;
+uint32_t delt_t = 0; // used to control display output rate
+uint32_t count = 0;  // used to control display output rate
+float pitch_Sensor_1;
+float yaw_Sensor_1;
+float roll_Sensor_1;
 #endif
 
 //################################################################//
@@ -314,6 +332,98 @@ inline float get_last_gyro_z_angle_Sensor_1() { return last_gyro_z_angle_Sensor_
 
 #endif
 
+#ifdef MADGWICK_FILTER
+void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, float gz)
+{
+    float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];         // short name local variable for readability
+    float norm;                                               // vector norm
+    float f1, f2, f3;                                         // objetive funcyion elements
+    float J_11or24, J_12or23, J_13or22, J_14or21, J_32, J_33; // objective function Jacobian elements
+    float qDot1, qDot2, qDot3, qDot4;
+    float hatDot1, hatDot2, hatDot3, hatDot4;
+    float gerrx, gerry, gerrz, gbiasx, gbiasy, gbiasz; // gyro bias error
+
+    // Auxiliary variables to avoid repeated arithmetic
+    float _halfq1 = 0.5f * q1;
+    float _halfq2 = 0.5f * q2;
+    float _halfq3 = 0.5f * q3;
+    float _halfq4 = 0.5f * q4;
+    float _2q1 = 2.0f * q1;
+    float _2q2 = 2.0f * q2;
+    float _2q3 = 2.0f * q3;
+    float _2q4 = 2.0f * q4;
+    float _2q1q3 = 2.0f * q1 * q3;
+    float _2q3q4 = 2.0f * q3 * q4;
+
+    // Normalise accelerometer measurement
+    norm = sqrt(ax * ax + ay * ay + az * az);
+    if (norm == 0.0f)
+        return; // handle NaN
+    norm = 1.0f / norm;
+    ax *= norm;
+    ay *= norm;
+    az *= norm;
+
+    // Compute the objective function and Jacobian
+    f1 = _2q2 * q4 - _2q1 * q3 - ax;
+    f2 = _2q1 * q2 + _2q3 * q4 - ay;
+    f3 = 1.0f - _2q2 * q2 - _2q3 * q3 - az;
+    J_11or24 = _2q3;
+    J_12or23 = _2q4;
+    J_13or22 = _2q1;
+    J_14or21 = _2q2;
+    J_32 = 2.0f * J_14or21;
+    J_33 = 2.0f * J_11or24;
+
+    // Compute the gradient (matrix multiplication)
+    hatDot1 = J_14or21 * f2 - J_11or24 * f1;
+    hatDot2 = J_12or23 * f1 + J_13or22 * f2 - J_32 * f3;
+    hatDot3 = J_12or23 * f2 - J_33 * f3 - J_13or22 * f1;
+    hatDot4 = J_14or21 * f1 + J_11or24 * f2;
+
+    // Normalize the gradient
+    norm = sqrt(hatDot1 * hatDot1 + hatDot2 * hatDot2 + hatDot3 * hatDot3 + hatDot4 * hatDot4);
+    hatDot1 /= norm;
+    hatDot2 /= norm;
+    hatDot3 /= norm;
+    hatDot4 /= norm;
+
+    // Compute estimated gyroscope biases
+    gerrx = _2q1 * hatDot2 - _2q2 * hatDot1 - _2q3 * hatDot4 + _2q4 * hatDot3;
+    gerry = _2q1 * hatDot3 + _2q2 * hatDot4 - _2q3 * hatDot1 - _2q4 * hatDot2;
+    gerrz = _2q1 * hatDot4 - _2q2 * hatDot3 + _2q3 * hatDot2 - _2q4 * hatDot1;
+
+    // Compute and remove gyroscope biases
+    gbiasx += gerrx * deltat * zeta;
+    gbiasy += gerry * deltat * zeta;
+    gbiasz += gerrz * deltat * zeta;
+    gx -= gbiasx;
+    gy -= gbiasy;
+    gz -= gbiasz;
+
+    // Compute the quaternion derivative
+    qDot1 = -_halfq2 * gx - _halfq3 * gy - _halfq4 * gz;
+    qDot2 = _halfq1 * gx + _halfq3 * gz - _halfq4 * gy;
+    qDot3 = _halfq1 * gy - _halfq2 * gz + _halfq4 * gx;
+    qDot4 = _halfq1 * gz + _halfq2 * gy - _halfq3 * gx;
+
+    // Compute then integrate estimated quaternion derivative
+    q1 += (qDot1 - (beta * hatDot1)) * deltat;
+    q2 += (qDot2 - (beta * hatDot2)) * deltat;
+    q3 += (qDot3 - (beta * hatDot3)) * deltat;
+    q4 += (qDot4 - (beta * hatDot4)) * deltat;
+
+    // Normalize the quaternion
+    norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4); // normalise quaternion
+    norm = 1.0f / norm;
+    q[0] = q1 * norm;
+    q[1] = q2 * norm;
+    q[2] = q3 * norm;
+    q[3] = q4 * norm;
+}
+
+#endif
+
 //################################################################//
 //########################### SETUP ##############################//
 //################################################################//
@@ -356,20 +466,20 @@ void setup()
     /////// Serial Buffer leeren ///////
     ////////////////////////////////////
 
-    Serial.println("Bitte Zeichen eingeben");
-    while (Serial.available() && Serial.read()) // empty buffer
-    {
-        Serial.println("emtpy buffer");
-    }
-    while (!Serial.available()) // wait for data
-    {
-        Serial.println("Bitte Zeichen eingeben");
-        delay(500);
-    }
-    while (Serial.available() && Serial.read()) // empty buffer again
-    {
-        Serial.println("emtpy again");
-    }
+    // Serial.println("Bitte Zeichen eingeben");
+    // while (Serial.available() && Serial.read()) // empty buffer
+    // {
+    //     Serial.println("emtpy buffer");
+    // }
+    // while (!Serial.available()) // wait for data
+    // {
+    //     Serial.println("Bitte Zeichen eingeben");
+    //     delay(500);
+    // }
+    // while (Serial.available() && Serial.read()) // empty buffer again
+    // {
+    //     Serial.println("emtpy again");
+    // }
 
     /////////////////////////////////////////////
     /////// Initialisieren der Sensor DMP ///////
@@ -669,21 +779,81 @@ void loop()
     ///////////// Madgwick Filter ///////////////
     /////////////////////////////////////////////
 
-    Serial.print(xx);
-    Serial.print("\t");
-    Serial.print(xx);
-    Serial.print("\t");
-    Serial.print(xx);
-    Serial.print("\t");
+    Now = micros();
+    deltat = ((Now - lastUpdate) / 1000000.0f); // set integration time by time elapsed since last filter update
+    lastUpdate = Now;
 
-    Serial.print(xx);
-    Serial.print("\t");
-    Serial.print(xx);
-    Serial.print("\t");
-    Serial.print(xx);
-    Serial.print("\t");
+    Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
+
+    // Serial.print("Vor QUat Funktion: \t");
+    // Serial.print(Acc_x_Sensor_1);
+    // Serial.print("\t");
+    // Serial.print(Acc_y_Sensor_1);
+    // Serial.print("\t");
+    // Serial.print(Acc_z_Sensor_1);
+    // Serial.print("\t");
+
+    // Serial.print(Gyro_x_Sensor_1);
+    // Serial.print("\t");
+    // Serial.print(Gyro_y_Sensor_1);
+    // Serial.print("\t");
+    // Serial.print(Gyro_z_Sensor_1);
+    // Serial.print("\t");
+
+    float Acc_x_scaled_Sensor_1 = (float)Acc_x_Sensor_1 / ACC_SENS_FACTOR_2;
+    float Acc_y_scaled_Sensor_1 = (float)Acc_y_Sensor_1 / ACC_SENS_FACTOR_2;
+    float Acc_z_scaled_Sensor_1 = (float)Acc_z_Sensor_1 / ACC_SENS_FACTOR_2;
+
+    float Gyro_x_scaled_Sensor_1 = (float)Gyro_x_Sensor_1 / GYRO_SENS_FACTOR_250;
+    float Gyro_y_scaled_Sensor_1 = (float)Gyro_y_Sensor_1 / GYRO_SENS_FACTOR_250;
+    float Gyro_z_scaled_Sensor_1 = (float)Gyro_z_Sensor_1 / GYRO_SENS_FACTOR_250;
+
+    // Serial.print("Vor QUat Funktion: \t");
+    // Serial.print(Acc_x_scaled_Sensor_1);
+    // Serial.print("\t");
+    // Serial.print(Acc_y_scaled_Sensor_1);
+    // Serial.print("\t");
+    // Serial.print(Acc_z_scaled_Sensor_1);
+    // Serial.print("\t");
+
+    // Serial.print(Gyro_x_scaled_Sensor_1);
+    // Serial.print("\t");
+    // Serial.print(Gyro_y_scaled_Sensor_1);
+    // Serial.print("\t");
+    // Serial.print(Gyro_z_scaled_Sensor_1);
+    // Serial.print("\t");
+    MadgwickQuaternionUpdate(Acc_x_scaled_Sensor_1, Acc_y_scaled_Sensor_1, Acc_z_scaled_Sensor_1, Gyro_x_scaled_Sensor_1 * DEGREE_TO_RADIANS, Gyro_y_scaled_Sensor_1 * DEGREE_TO_RADIANS, Gyro_z_scaled_Sensor_1 * DEGREE_TO_RADIANS); // Gyro Werte müssen als rad/sec reingegeben werden
+
+    delt_t = millis() - count;
+    if (delt_t > 100)
+    {
+        yaw_Sensor_1 = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);
+        pitch_Sensor_1 = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
+        roll_Sensor_1 = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
+
+        yaw_Sensor_1 *= RADIANS_TO_DEGREES;
+        pitch_Sensor_1 *= RADIANS_TO_DEGREES;
+        roll_Sensor_1 *= RADIANS_TO_DEGREES;
+
+        Serial.print("YPR \t");
+        Serial.print(yaw_Sensor_1);
+        Serial.print("\t");
+        Serial.print(pitch_Sensor_1);
+        Serial.print("\t");
+        Serial.print(roll_Sensor_1);
+        Serial.println("\t");
+
+        // Serial.print(yaw_Sensor_1);
+        // Serial.print("\t");
+        // Serial.print(pitch_Sensor_1);
+        // Serial.print("\t");
+        // Serial.print(roll_Sensor_1);
+        // Serial.print("\t");
+
+        count = millis();
+    }
 
 #endif
 
-    Serial.println("");
+    // Serial.println("");
 }
