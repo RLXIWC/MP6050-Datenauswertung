@@ -29,6 +29,8 @@
 #include "MPU6050_6Axis_MotionApps_V6_12.h" // MPU6050 Library von I2CDev
 #include "Wire.h"                           // Nötig für I2C Bus
 #include "GeekMum_Complement_Filter.h"
+#include <SPI.h>
+#include <SD.h>
 
 //################################################################//
 //########################## Defines #############################//
@@ -61,24 +63,30 @@
 //////// AUSGABE DEFINES //////////
 ///////////////////////////////////
 
-// #define QUATERNION_VALUES
+#define QUATERNION_VALUES
 // #define YAW_PITCH_ROLL
 // #define EULER_VALUES
-#define FILTERED_VALUES
+// #define FILTERED_VALUES
 
 ///////////////////////////////////
 //////// OFFSET DEFINES ///////////
 ///////////////////////////////////
 
 // #define MANUAL_OFFSET
-// #define PID_OFFSET // loop number einstellbar in globale Variablen - aktuell 15
+#define PID_OFFSET // loop number einstellbar in globale Variablen - aktuell 15
 
 ///////////////////////////////////
 //////// FILTER DEFINES ///////////
 ///////////////////////////////////
 
-#define COMPLEMENT_FILTER
+// #define COMPLEMENT_FILTER
 // #define MADGWICK_FILTER
+
+///////////////////////////////////
+//////// SD Card Option ///////////
+///////////////////////////////////
+
+#define SD_LOGGING
 
 //################################################################//
 //###################### globale Variablen #######################//
@@ -425,6 +433,11 @@ void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, 
 
 #endif
 
+#ifdef SD_LOGGING
+File myFile;
+unsigned long Quat_counter = 0;
+#endif
+
 //################################################################//
 //########################### SETUP ##############################//
 //################################################################//
@@ -577,6 +590,19 @@ void setup()
 
 #endif
 
+#ifdef SD_LOGGING
+    Serial.print("Initializing SD card...");
+
+    if (!SD.begin(29)) // Channel Select des SPI liegt auf Pi n 29 am ATMega Entwicklungsboard
+    {
+        Serial.println("initialization failed!");
+        while (1)
+            ;
+    }
+    Serial.println("initialization done.");
+
+#endif
+
     ///////////////////////////////////////
     /////////// Startausgaben /////////////
     ///////////////////////////////////////
@@ -633,6 +659,7 @@ void loop()
     Sensor_1.dmpGetQuaternion(&quaternion_Sensor_1, Data_Array_Sensor_1);
     Sensor_2.dmpGetQuaternion(&quaternion_Sensor_2, Data_Array_Sensor_2);
 
+#ifndef SD_LOGGING
     Serial.print(quaternion_Sensor_1.w);
     Serial.print("\t");
     Serial.print(quaternion_Sensor_1.x);
@@ -649,7 +676,42 @@ void loop()
     Serial.print(quaternion_Sensor_2.y);
     Serial.print("\t");
     Serial.print(quaternion_Sensor_2.z);
-    Serial.print("\t");
+    Serial.println("\t");
+#endif
+
+#ifdef SD_LOGGING
+    myFile = SD.open("test.txt", FILE_WRITE); // file öffnen und file descriptor auslesen
+    if (myFile)
+    {
+        myFile.print(Quat_counter);
+        myFile.print("\t \t ");
+        myFile.print(quaternion_Sensor_1.w, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_Sensor_1.x, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_Sensor_1.y, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_Sensor_1.z, 4);
+        myFile.print("\t \t ");
+        myFile.print(quaternion_Sensor_2.w, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_Sensor_2.x, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_Sensor_2.y, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_Sensor_2.z, 4);
+        myFile.println("\t");
+
+        myFile.close();
+        Quat_counter++;
+        delay(100); // Ausgabe etwa in 0,1 sec Schritten
+    }
+    else
+    {
+        Serial.println("error opening test.txt"); //Fehlerfall Ausgabe
+    }
+#endif
+
 #endif
 
 #ifdef YAW_PITCH_ROLL
