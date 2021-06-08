@@ -31,6 +31,10 @@
 #include "GeekMum_Complement_Filter.h"
 #include <SPI.h>
 #include <SD.h>
+#include <Adafruit_GFX.h>    // Core graphics library
+#include <Adafruit_ST7735.h> // Hardware-specific library for ST7735
+#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
+#include <Adafruit_I2CDevice.h>
 
 //################################################################//
 //########################## Defines #############################//
@@ -63,7 +67,7 @@
 //////// AUSGABE DEFINES //////////
 ///////////////////////////////////
 
-#define QUATERNION_VALUES
+// #define QUATERNION_VALUES
 // #define YAW_PITCH_ROLL
 // #define EULER_VALUES
 // #define FILTERED_VALUES
@@ -73,7 +77,7 @@
 ///////////////////////////////////
 
 // #define MANUAL_OFFSET
-#define PID_OFFSET // loop number einstellbar in globale Variablen - aktuell 15
+// #define PID_OFFSET // loop number einstellbar in globale Variablen - aktuell 15
 
 ///////////////////////////////////
 //////// FILTER DEFINES ///////////
@@ -86,7 +90,19 @@
 //////// SD Card Option ///////////
 ///////////////////////////////////
 
-#define SD_LOGGING
+// #define SD_LOGGING
+
+///////////////////////////////////
+///////// OLED Output /////////////
+///////////////////////////////////
+
+#define OLED_OUTPUT
+
+#ifdef OLED_OUTPUT
+#define CS_Pin 46
+#define RST_Pin 8
+#define DC_Pin 9 // RS Pin entspricht DC Pin
+#endif
 
 //################################################################//
 //###################### globale Variablen #######################//
@@ -219,6 +235,17 @@ uint32_t count = 0;  // used to control display output rate
 float pitch_Sensor_1;
 float yaw_Sensor_1;
 float roll_Sensor_1;
+#endif
+
+#ifdef SD_LOGGING
+File myFile;
+unsigned long Quat_counter = 0;
+#endif
+
+#ifdef OLED_OUTPUT
+
+Adafruit_ST7735 OLED_Display = Adafruit_ST7735(CS_Pin, DC_Pin, RST_Pin);
+
 #endif
 
 //################################################################//
@@ -433,9 +460,21 @@ void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, 
 
 #endif
 
-#ifdef SD_LOGGING
-File myFile;
-unsigned long Quat_counter = 0;
+#ifdef OLED_OUTPUT
+void testdrawtext(char *text, uint16_t color, int x, int y)
+{
+    int16_t x1, y1;
+    uint16_t w, h;
+    // OLED_Display.getTextBounds(text, x, y, &x1, &y1, &w, &h);
+    // Serial.print("Width : ");
+    // Serial.println(w);
+    // OLED_Display.setCursor(x - w / 2, y);
+    OLED_Display.setTextSize(2);
+    OLED_Display.setCursor(80, 0);
+    OLED_Display.setTextColor(color);
+    OLED_Display.setTextWrap(true);
+    OLED_Display.print(text);
+}
 #endif
 
 //################################################################//
@@ -601,6 +640,14 @@ void setup()
     }
     Serial.println("initialization done.");
 
+#endif
+
+#ifdef OLED_OUTPUT
+
+    OLED_Display.initR(INITR_BLACKTAB); // Initialisieren des  ST7735S chip, black tab
+    OLED_Display.setRotation(1);
+    OLED_Display.fillScreen(ST77XX_BLACK); // Start mit schwarzen Bild
+    testdrawtext("O", ST77XX_WHITE, 80, 64);
 #endif
 
     ///////////////////////////////////////
