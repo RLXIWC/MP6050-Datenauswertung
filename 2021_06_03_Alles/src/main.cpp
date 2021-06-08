@@ -570,28 +570,32 @@ void drawInfo(void)
 
     tft.setTextColor(TFT_WHITE);
     tft.setCursor(80 - 12 - 13, 64 - 20 - 3);
-    tft.print("10");
+    tft.print("20");
     tft.setCursor(80 + 12 + 1, 64 - 20 - 3);
-    tft.print("10");
+    tft.print("20");
     tft.setCursor(80 - 12 - 13, 64 + 20 - 3);
-    tft.print("10");
+    tft.print("20");
     tft.setCursor(80 + 12 + 1, 64 + 20 - 3);
-    tft.print("10");
+    tft.print("20");
 
     tft.setCursor(80 - 12 - 13, 64 - 40 - 3);
-    tft.print("20");
+    tft.print("40");
     tft.setCursor(80 + 12 + 1, 64 - 40 - 3);
-    tft.print("20");
+    tft.print("40");
     tft.setCursor(80 - 12 - 13, 64 + 40 - 3);
-    tft.print("20");
+    tft.print("40");
     tft.setCursor(80 + 12 + 1, 64 + 40 - 3);
-    tft.print("20");
+    tft.print("40");
 
     // Display justified angle value near bottom of screen
     tft.setTextColor(TFT_YELLOW, BROWN); // Text with background
     tft.setTextDatum(MC_DATUM);          // Centre middle justified
     tft.setTextPadding(24);              // Padding width to wipe previous number
+    // tft.setCursor(74, 120);
+    // tft.print("Roll: ");
     tft.drawNumber(last_roll, 80, 120, 1);
+    // tft.setCursor(82, 120);
+    // tft.print(" °");
 }
 
 // #########################################################################
@@ -998,6 +1002,7 @@ void loop()
 
 #ifdef OLED_OUTPUT
     Sensor_1.dmpGetEuler(euler_Sensor_1, &quaternion_Sensor_1);
+    Sensor_2.dmpGetEuler(euler_Sensor_2, &quaternion_Sensor_2);
     Serial.print(euler_Sensor_1[2] * RADIANS_TO_DEGREES);
     Serial.print("\t");
     Serial.print(euler_Sensor_1[1] * RADIANS_TO_DEGREES);
@@ -1011,7 +1016,7 @@ void loop()
     Serial.print("\t");
     Serial.print(euler_Sensor_2[0] * RADIANS_TO_DEGREES);
     Serial.println("\t");
-    updateHorizon((int)euler_Sensor_1[2], (int)euler_Sensor_1[1]);
+    updateHorizon(euler_Sensor_2[2] * RADIANS_TO_DEGREES, euler_Sensor_2[1] * RADIANS_TO_DEGREES);
 
 #endif
 
