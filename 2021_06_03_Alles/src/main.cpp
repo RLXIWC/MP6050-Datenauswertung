@@ -593,7 +593,7 @@ void drawInfo(void)
     tft.setTextPadding(24);              // Padding width to wipe previous number
     // tft.setCursor(74, 120);
     // tft.print("Roll: ");
-    tft.drawNumber(last_roll, 80, 120, 1);
+    tft.drawNumber(-last_roll, 80, 120, 1);
     // tft.setCursor(82, 120);
     // tft.print(" °");
 }
@@ -601,13 +601,31 @@ void drawInfo(void)
 // #########################################################################
 // Update the horizon with a new angle (angle in range -180 to +180)
 // #########################################################################
-void updateHorizon(int angle, int pitch)
+void updateHorizon(int roll, int pitch)
 {
+    // if (roll >= 0)
+    // {
+    //     roll += 0.5;
+    // }
+    // else
+    // {
+    //     roll -= 0.5;
+    // }
+
+    // if (pitch >= 0)
+    // {
+    //     pitch += 0.5;
+    // }
+    // else
+    // {
+    //     pitch -= 0.5;
+    // }
+
     bool draw = 1;
-    int delta_pitch = 0;
+    float delta_pitch = 0;
     int pitch_error = 0;
-    int delta_roll = 0;
-    while ((last_pitch != pitch) || (last_roll != angle))
+    float delta_roll = 0;
+    while ((last_pitch != pitch) || (last_roll != roll))
     {
         delta_pitch = 0;
         delta_roll = 0;
@@ -617,16 +635,15 @@ void updateHorizon(int angle, int pitch)
             delta_pitch = 1;
             pitch_error = pitch - last_pitch;
         }
-
         if (last_pitch > pitch)
         {
             delta_pitch = -1;
             pitch_error = last_pitch - pitch;
         }
 
-        if (last_roll < angle)
+        if (last_roll < roll)
             delta_roll = 1;
-        if (last_roll > angle)
+        if (last_roll > roll)
             delta_roll = -1;
 
         if (delta_roll == 0)
@@ -634,78 +651,9 @@ void updateHorizon(int angle, int pitch)
             if (pitch_error > 1)
                 delta_pitch *= 2;
         }
-
         drawHorizon(last_roll + delta_roll, last_pitch + delta_pitch);
         drawInfo();
     }
-}
-
-// #########################################################################
-// Function to generate roll angles for testing only
-// #########################################################################
-
-int angleGenerator(int maxAngle)
-{
-
-    // Synthesize a smooth +/- 50 degree roll value for testing
-    delta++;
-    if (delta >= 360)
-        test_angle = 0;
-    test_angle = (maxAngle + 1) * sin((delta)*DEG2RAD);
-
-    // Clip value so we hold angle near peak
-    if (test_angle > maxAngle)
-        test_angle = maxAngle;
-    if (test_angle < -maxAngle)
-        test_angle = -maxAngle;
-
-    return test_angle;
-}
-
-void testRoll(void)
-{
-    // tft.setTextColor(TFT_YELLOW, SKY_BLUE);
-    // tft.setTextDatum(TC_DATUM); // Centre middle justified
-    // tft.drawString("Roll test", 64, 10, 1);
-
-    for (int a = 0; a < 360; a++)
-    {
-        //delay(REDRAW_DELAY / 2);
-        updateHorizon(angleGenerator(180), 0);
-    }
-    tft.setTextColor(TFT_YELLOW, SKY_BLUE);
-    tft.setTextDatum(TC_DATUM); // Centre middle justified
-    tft.drawString("         ", 64, 10, 1);
-}
-
-void testPitch(void)
-{
-
-    // tft.setTextColor(TFT_YELLOW, SKY_BLUE);
-    // tft.setTextDatum(TC_DATUM); // Centre middle justified
-    // tft.drawString("Pitch test", 64, 10, 1);
-
-    for (int p = 0; p > -80; p--)
-    {
-        delay(REDRAW_DELAY / 2);
-        updateHorizon(0, p);
-    }
-
-    for (int p = -80; p < 80; p++)
-    {
-        delay(REDRAW_DELAY / 2);
-        updateHorizon(0, p);
-    }
-
-    for (int p = 80; p > 0; p--)
-    {
-        delay(REDRAW_DELAY / 2);
-        updateHorizon(0, p);
-    }
-
-    tft.setTextColor(TFT_YELLOW, SKY_BLUE);
-    tft.setTextDatum(TC_DATUM); // Centre middle justified
-    tft.drawString("          ", 64, 10, 1);
 }
 
 #endif
@@ -1016,7 +964,7 @@ void loop()
     Serial.print("\t");
     Serial.print(euler_Sensor_2[0] * RADIANS_TO_DEGREES);
     Serial.println("\t");
-    updateHorizon(euler_Sensor_2[2] * RADIANS_TO_DEGREES, euler_Sensor_2[1] * RADIANS_TO_DEGREES);
+    updateHorizon(euler_Sensor_2[2] * RADIANS_TO_DEGREES, -euler_Sensor_2[1] * RADIANS_TO_DEGREES);
 
 #endif
 
