@@ -1019,32 +1019,32 @@ void loop()
     Quaternion quaternion_result;
     getMeanValue_Quaternion(quaternion_result);
 
-    Serial.print(quaternion_Sensor_1.w, 4);
-    Serial.print("\t");
-    Serial.print(quaternion_Sensor_1.x, 4);
-    Serial.print("\t");
-    Serial.print(quaternion_Sensor_1.y, 4);
-    Serial.print("\t");
-    Serial.print(quaternion_Sensor_1.z, 4);
-    Serial.print("\t");
+    // Serial.print(quaternion_Sensor_1.w, 4);
+    // Serial.print("\t");
+    // Serial.print(quaternion_Sensor_1.x, 4);
+    // Serial.print("\t");
+    // Serial.print(quaternion_Sensor_1.y, 4);
+    // Serial.print("\t");
+    // Serial.print(quaternion_Sensor_1.z, 4);
+    // Serial.print("\t");
 
-    Serial.print(quaternion_Sensor_2.w, 4);
-    Serial.print("\t");
-    Serial.print(quaternion_Sensor_2.x, 4);
-    Serial.print("\t");
-    Serial.print(quaternion_Sensor_2.y, 4);
-    Serial.print("\t");
-    Serial.print(quaternion_Sensor_2.z, 4);
-    Serial.print("\t");
+    // Serial.print(quaternion_Sensor_2.w, 4);
+    // Serial.print("\t");
+    // Serial.print(quaternion_Sensor_2.x, 4);
+    // Serial.print("\t");
+    // Serial.print(quaternion_Sensor_2.y, 4);
+    // Serial.print("\t");
+    // Serial.print(quaternion_Sensor_2.z, 4);
+    // Serial.print("\t");
 
-    Serial.print(quaternion_result.w, 4);
-    Serial.print("\t");
-    Serial.print(quaternion_result.x, 4);
-    Serial.print("\t");
-    Serial.print(quaternion_result.y, 4);
-    Serial.print("\t");
-    Serial.print(quaternion_result.z, 4);
-    Serial.print("\t \t");
+    // Serial.print(quaternion_result.w, 4);
+    // Serial.print("\t");
+    // Serial.print(quaternion_result.x, 4);
+    // Serial.print("\t");
+    // Serial.print(quaternion_result.y, 4);
+    // Serial.print("\t");
+    // Serial.print(quaternion_result.z, 4);
+    // Serial.print("\t \t");
 
 #endif
 
@@ -1246,14 +1246,14 @@ void loop()
         Serial.print(pitch_Sensor_1);
         Serial.print("\t");
         Serial.print(roll_Sensor_1);
-        Serial.println("\t");
+        Serial.print("\t");
 
         Serial.print(yaw_Sensor_2);
         Serial.print("\t");
         Serial.print(pitch_Sensor_2);
         Serial.print("\t");
         Serial.print(roll_Sensor_2);
-        Serial.print("\t \t");
+        Serial.println("\t \t");
 
         count = millis();
     }
@@ -1265,7 +1265,7 @@ void loop()
     if (myFile)
     {
         myFile.print(Quat_counter);
-        myFile.print("\t \t ");
+        myFile.print("\t");
         myFile.print(quaternion_Sensor_1.w, 4);
         myFile.print("\t");
         myFile.print(quaternion_Sensor_1.x, 4);
@@ -1273,7 +1273,7 @@ void loop()
         myFile.print(quaternion_Sensor_1.y, 4);
         myFile.print("\t");
         myFile.print(quaternion_Sensor_1.z, 4);
-        myFile.print("\t \t ");
+        myFile.print("\t");
         myFile.print(quaternion_Sensor_2.w, 4);
         myFile.print("\t");
         myFile.print(quaternion_Sensor_2.x, 4);
@@ -1289,7 +1289,7 @@ void loop()
         myFile.print(quaternion_result.y, 4);
         myFile.print("\t");
         myFile.print(quaternion_result.z, 4);
-        myFile.print("\t \t");
+        myFile.print("\t");
 
         myFile.print(euler_Sensor_1[2] * RADIANS_TO_DEGREES, 4); // x
         myFile.print("\t");
@@ -1310,7 +1310,7 @@ void loop()
         myFile.print(euler_result[1] * RADIANS_TO_DEGREES, 4);
         myFile.print("\t");
         myFile.print(euler_result[0] * RADIANS_TO_DEGREES, 4);
-        myFile.print("\t \t");
+        myFile.print("\t");
 
         myFile.print(yaw_Sensor_1);
         myFile.print("\t");
