@@ -95,7 +95,7 @@
 ///////// OLED Output /////////////
 ///////////////////////////////////
 
-#define OLED_OUTPUT
+// #define OLED_OUTPUT
 
 #ifdef OLED_OUTPUT
 #define REDRAW_DELAY 16 // minimum delay in milliseconds between display updates
@@ -940,7 +940,7 @@ void setup()
         while (1)
             ;
     }
-    Serial.println("initialization done.");
+    Serial.println("SD Card SPI initialization done.");
 
 #endif
 
@@ -1017,7 +1017,7 @@ void loop()
     Sensor_2.dmpGetQuaternion(&quaternion_Sensor_2, Data_Array_Sensor_2);
 
     Quaternion quaternion_result;
-    getMeanValue_Quaternion(quaternion_result);
+    // getMeanValue_Quaternion(quaternion_result);
 
     // Serial.print(quaternion_Sensor_1.w, 4);
     // Serial.print("\t");
