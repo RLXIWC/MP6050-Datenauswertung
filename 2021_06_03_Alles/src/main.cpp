@@ -68,8 +68,8 @@
 
 #define QUATERNION_VALUES
 // #define YAW_PITCH_ROLL
-// #define EULER_VALUES
-// #define FILTERED_VALUES
+#define EULER_VALUES
+#define FILTERED_VALUES
 
 ///////////////////////////////////
 //////// OFFSET DEFINES ///////////
@@ -83,13 +83,13 @@
 ///////////////////////////////////
 
 // #define COMPLEMENT_FILTER
-// #define MADGWICK_FILTER
+#define MADGWICK_FILTER
 
 ///////////////////////////////////
 //////// SD Card Option ///////////
 ///////////////////////////////////
 
-// #define SD_LOGGING
+#define SD_LOGGING
 
 ///////////////////////////////////
 ///////// OLED Output /////////////
@@ -186,6 +186,10 @@ float yaw_pitch_roll_Sensor_2[3]; // Speichert den jeweiligen Winkel zur z, y, x
 float euler_Sensor_1[3]; // Speichert den jeweiligen Euler WInkel zur z,y,x Achse -Sensor 1
 float euler_Sensor_2[3]; // Speichert den jeweiligen Euler WInkel zur z,y,x Achse -Sensor 2
 
+float last_euler_Sensor_1[3] = {0, 0, 0}; //Speichert die vorherigen Euler Winkel z,y,x Sensor 1
+float last_euler_Sensor_2[3] = {0, 0, 0}; //Speichert die vorherigen Euler Winkel z,y,x Sensor 2
+float euler_result[3] = {0, 0, 0};        // Speicher die Mittelwerte
+
 #ifdef PID_OFFSET
 ///// PID OFFSET Variables /////
 uint8_t pidloop = 15;
@@ -233,7 +237,8 @@ uint8_t pidloop = 15;
 #endif
 
 #ifdef MADGWICK_FILTER
-float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};          // vector to hold quaternion
+float q_Sensor_1[4] = {1.0f, 0.0f, 0.0f, 0.0f}; // vector to hold quaternion
+float q_Sensor_2[4] = {1.0f, 0.0f, 0.0f, 0.0f}; // vector to hold quaternion
 float GyroMeasDrift = PI * (2.0f / 180.0f);     // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
 float GyroMeasError = PI * (40.0f / 180.0f);    // gyroscope measurement error in rads/s (start at 60 deg/s), then reduce after ~10 s to 3
 float beta = sqrt(3.0f / 4.0f) * GyroMeasError; // compute beta
@@ -247,6 +252,9 @@ uint32_t count = 0;  // used to control display output rate
 float pitch_Sensor_1;
 float yaw_Sensor_1;
 float roll_Sensor_1;
+float pitch_Sensor_2;
+float yaw_Sensor_2;
+float roll_Sensor_2;
 #endif
 
 #ifdef SD_LOGGING
@@ -273,6 +281,114 @@ unsigned long redrawTime = 0;
 //################################################################//
 //######################### Functions ############################//
 //################################################################//
+
+void fill_Last_euler(int runvar)
+{
+    switch (runvar)
+    {
+    case 1:
+        for (int i = 0; i < 3; i++) // Die aktuellen Werte sind ok, und werden als neue "last" Values gespeichert
+        {
+            last_euler_Sensor_1[i] = euler_Sensor_1[i];
+        }
+        break;
+    case 2:
+
+        for (int i = 0; i < 3; i++) // Die aktuellen Werte sind ok, und werden als neue "last" Values gespeichert
+        {
+            last_euler_Sensor_2[i] = euler_Sensor_2[i];
+        }
+        break;
+    default:
+        for (int i = 0; i < 3; i++) // Die aktuellen Werte sind ok, und werden als neue "last" Values gespeichert
+        {
+            last_euler_Sensor_1[i] = euler_Sensor_1[i];
+            last_euler_Sensor_2[i] = euler_Sensor_2[i];
+        }
+        break;
+    }
+}
+
+bool getMeanValue_Quaternion(Quaternion &pQuat_Result) // ermittelt den Mittelwert w,x,y,z der  Quaternionen beider Sensoren
+{
+    pQuat_Result.w = (quaternion_Sensor_1.w + quaternion_Sensor_2.w) / 2.0;
+    pQuat_Result.x = (quaternion_Sensor_1.x + quaternion_Sensor_2.x) / 2.0;
+    pQuat_Result.y = (quaternion_Sensor_1.y + quaternion_Sensor_2.y) / 2.0;
+    pQuat_Result.z = (quaternion_Sensor_1.z + quaternion_Sensor_2.z) / 2.0;
+
+    return true;
+}
+
+bool getMeanValue_Eulerwinkel(float *euler_result) // ermittelt den Mittelwert der Eulerwinkel beider Sensoren    //z,y,x
+{
+    int runvar = 0;
+    // float delta_pitch;
+    // float delta_roll;
+
+    // delta_roll = abs(euler_Sensor_1[2] * RADIANS_TO_DEGREES - euler_Sensor_2[2] * RADIANS_TO_DEGREES);
+    // delta_pitch = abs(euler_Sensor_1[1] * RADIANS_TO_DEGREES - euler_Sensor_2[1] * RADIANS_TO_DEGREES);
+
+    // if (delta_roll >= 10.0)
+    // {
+    //     Serial.println("Innerhalb roll pitch");
+    //     float delta_last_roll_Sensor_1 = abs(euler_Sensor_1[2] * RADIANS_TO_DEGREES - last_euler_Sensor_1[2] * RADIANS_TO_DEGREES);
+    //     float delta_last_roll_Sensor_2 = abs(euler_Sensor_2[2] * RADIANS_TO_DEGREES - last_euler_Sensor_2[2] * RADIANS_TO_DEGREES);
+
+    //     if (delta_last_roll_Sensor_1 >= delta_last_roll_Sensor_2)
+    //     {
+    //         euler_result[0] = euler_Sensor_2[0]; // Wenn delta last pitch von Sensor 1 zu groß ist, nimm Sensor 2
+    //         euler_result[1] = euler_Sensor_2[1];
+    //         euler_result[2] = euler_Sensor_2[2];
+    //         runvar = 2;
+    //         Serial.println("Fehler Sensor 1 - Roll");
+    //     }
+    //     else
+    //     {
+    //         euler_result[0] = euler_Sensor_1[0]; // Wenn delta last pitch von Sensor 2 zu groß ist, nimm Sensor 1
+    //         euler_result[1] = euler_Sensor_1[1];
+    //         euler_result[2] = euler_Sensor_1[2];
+    //         runvar = 1;
+    //         Serial.println("Fehler Sensor 2 - Roll");
+    //     }
+    // }
+
+    // if (delta_pitch >= 10.0)
+    // {
+    //     Serial.println("Innerhalb delta pitch");
+
+    //     float delta_last_pitch_Sensor_1 = abs(euler_Sensor_1[1] - last_euler_Sensor_1[1]);
+    //     float delta_last_pitch_Sensor_2 = abs(euler_Sensor_2[1] - last_euler_Sensor_2[1]);
+
+    //     if (delta_last_pitch_Sensor_1 >= delta_last_pitch_Sensor_2)
+    //     {
+    //         euler_result[0] = euler_Sensor_2[0]; // Wenn delta last pitch von Sensor 1 zu groß ist, nimm Sensor 2
+    //         euler_result[1] = euler_Sensor_2[1];
+    //         euler_result[2] = euler_Sensor_2[2];
+    //         runvar = 2;
+    //         Serial.println("Fehler Sensor 1 - Pitch");
+    //     }
+    //     else
+    //     {
+    //         euler_result[0] = euler_Sensor_1[0]; // Wenn delta last pitch von Sensor 2 zu groß ist, nimm Sensor 1
+    //         euler_result[1] = euler_Sensor_1[1];
+    //         euler_result[2] = euler_Sensor_1[2];
+    //         runvar = 1;
+    //         Serial.println("Fehler Sensor 2 - Pitch");
+    //     }
+    //     runvar = 2;
+    // }
+
+    if (runvar == 0)
+    {
+        euler_result[0] = (euler_Sensor_1[0] + euler_Sensor_2[0]) / 2.0;
+        euler_result[1] = (euler_Sensor_1[1] + euler_Sensor_2[1]) / 2.0;
+        euler_result[2] = (euler_Sensor_1[2] + euler_Sensor_2[2]) / 2.0;
+    }
+
+    // fill_Last_euler(runvar);
+
+    return true;
+}
 
 #ifdef COMPLEMENT_FILTER
 
@@ -391,9 +507,20 @@ unsigned long redrawTime = 0;
 #endif
 
 #ifdef MADGWICK_FILTER
-void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, float gz)
+void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, float gz, int pSensor)
 {
-    float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];         // short name local variable for readability
+
+    float q1, q2, q3, q4; // short name local variable for readability
+
+    if (pSensor == 1)
+    {
+        q1 = q_Sensor_1[0], q2 = q_Sensor_1[1], q3 = q_Sensor_1[2], q4 = q_Sensor_1[3];
+    }
+    else
+    {
+        q1 = q_Sensor_2[0], q2 = q_Sensor_2[1], q3 = q_Sensor_2[2], q4 = q_Sensor_2[3];
+    }
+
     float norm;                                               // vector norm
     float f1, f2, f3;                                         // objetive funcyion elements
     float J_11or24, J_12or23, J_13or22, J_14or21, J_32, J_33; // objective function Jacobian elements
@@ -474,10 +601,21 @@ void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, 
     // Normalize the quaternion
     norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4); // normalise quaternion
     norm = 1.0f / norm;
-    q[0] = q1 * norm;
-    q[1] = q2 * norm;
-    q[2] = q3 * norm;
-    q[3] = q4 * norm;
+
+    if (pSensor == 1)
+    {
+        q_Sensor_1[0] = q1 * norm;
+        q_Sensor_1[1] = q2 * norm;
+        q_Sensor_1[2] = q3 * norm;
+        q_Sensor_1[3] = q4 * norm;
+    }
+    else
+    {
+        q_Sensor_2[0] = q1 * norm;
+        q_Sensor_2[1] = q2 * norm;
+        q_Sensor_2[2] = q3 * norm;
+        q_Sensor_2[3] = q4 * norm;
+    }
 }
 
 #endif
@@ -603,23 +741,6 @@ void drawInfo(void)
 // #########################################################################
 void updateHorizon(int roll, int pitch)
 {
-    // if (roll >= 0)
-    // {
-    //     roll += 0.5;
-    // }
-    // else
-    // {
-    //     roll -= 0.5;
-    // }
-
-    // if (pitch >= 0)
-    // {
-    //     pitch += 0.5;
-    // }
-    // else
-    // {
-    //     pitch -= 0.5;
-    // }
 
     bool draw = 1;
     float delta_pitch = 0;
@@ -895,78 +1016,35 @@ void loop()
     Sensor_1.dmpGetQuaternion(&quaternion_Sensor_1, Data_Array_Sensor_1);
     Sensor_2.dmpGetQuaternion(&quaternion_Sensor_2, Data_Array_Sensor_2);
 
-#ifndef SD_LOGGING
-    // Serial.print(quaternion_Sensor_1.w);
-    // Serial.print("\t");
-    // Serial.print(quaternion_Sensor_1.x);
-    // Serial.print("\t");
-    // Serial.print(quaternion_Sensor_1.y);
-    // Serial.print("\t");
-    // Serial.print(quaternion_Sensor_1.z);
-    // Serial.print("\t");
+    Quaternion quaternion_result;
+    getMeanValue_Quaternion(quaternion_result);
 
-    // Serial.print(quaternion_Sensor_2.w);
-    // Serial.print("\t");
-    // Serial.print(quaternion_Sensor_2.x);
-    // Serial.print("\t");
-    // Serial.print(quaternion_Sensor_2.y);
-    // Serial.print("\t");
-    // Serial.print(quaternion_Sensor_2.z);
-    // Serial.println("\t");
-#endif
-
-#ifdef SD_LOGGING
-    myFile = SD.open("test.txt", FILE_WRITE); // file öffnen und file descriptor auslesen
-    if (myFile)
-    {
-        myFile.print(Quat_counter);
-        myFile.print("\t \t ");
-        myFile.print(quaternion_Sensor_1.w, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_Sensor_1.x, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_Sensor_1.y, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_Sensor_1.z, 4);
-        myFile.print("\t \t ");
-        myFile.print(quaternion_Sensor_2.w, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_Sensor_2.x, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_Sensor_2.y, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_Sensor_2.z, 4);
-        myFile.println("\t");
-
-        myFile.close();
-        Quat_counter++;
-        delay(100); // Ausgabe etwa in 0,1 sec Schritten
-    }
-    else
-    {
-        Serial.println("error opening test.txt"); //Fehlerfall Ausgabe
-    }
-#endif
-
-#ifdef OLED_OUTPUT
-    Sensor_1.dmpGetEuler(euler_Sensor_1, &quaternion_Sensor_1);
-    Sensor_2.dmpGetEuler(euler_Sensor_2, &quaternion_Sensor_2);
-    Serial.print(euler_Sensor_1[2] * RADIANS_TO_DEGREES);
+    Serial.print(quaternion_Sensor_1.w, 4);
     Serial.print("\t");
-    Serial.print(euler_Sensor_1[1] * RADIANS_TO_DEGREES);
+    Serial.print(quaternion_Sensor_1.x, 4);
     Serial.print("\t");
-    Serial.print(euler_Sensor_1[0] * RADIANS_TO_DEGREES);
+    Serial.print(quaternion_Sensor_1.y, 4);
+    Serial.print("\t");
+    Serial.print(quaternion_Sensor_1.z, 4);
     Serial.print("\t");
 
-    Serial.print(euler_Sensor_2[2] * RADIANS_TO_DEGREES);
+    Serial.print(quaternion_Sensor_2.w, 4);
     Serial.print("\t");
-    Serial.print(euler_Sensor_2[1] * RADIANS_TO_DEGREES);
+    Serial.print(quaternion_Sensor_2.x, 4);
     Serial.print("\t");
-    Serial.print(euler_Sensor_2[0] * RADIANS_TO_DEGREES);
-    Serial.println("\t");
-    updateHorizon(euler_Sensor_2[2] * RADIANS_TO_DEGREES, -euler_Sensor_2[1] * RADIANS_TO_DEGREES);
+    Serial.print(quaternion_Sensor_2.y, 4);
+    Serial.print("\t");
+    Serial.print(quaternion_Sensor_2.z, 4);
+    Serial.print("\t");
 
-#endif
+    Serial.print(quaternion_result.w, 4);
+    Serial.print("\t");
+    Serial.print(quaternion_result.x, 4);
+    Serial.print("\t");
+    Serial.print(quaternion_result.y, 4);
+    Serial.print("\t");
+    Serial.print(quaternion_result.z, 4);
+    Serial.print("\t \t");
 
 #endif
 
@@ -1021,20 +1099,29 @@ void loop()
 
     Sensor_1.dmpGetEuler(euler_Sensor_1, &quaternion_Sensor_1);
     Sensor_2.dmpGetEuler(euler_Sensor_2, &quaternion_Sensor_2);
+    getMeanValue_Eulerwinkel(euler_result);
 
-    Serial.print(euler_Sensor_1[2] * RADIANS_TO_DEGREES);
+    Serial.print(euler_Sensor_1[2] * RADIANS_TO_DEGREES, 4); // x
     Serial.print("\t");
-    Serial.print(euler_Sensor_1[1] * RADIANS_TO_DEGREES);
+    Serial.print(euler_Sensor_1[1] * RADIANS_TO_DEGREES, 4); // y
     Serial.print("\t");
-    Serial.print(euler_Sensor_1[0] * RADIANS_TO_DEGREES);
+    Serial.print(euler_Sensor_1[0] * RADIANS_TO_DEGREES, 4); // z
     Serial.print("\t");
 
-    Serial.print(euler_Sensor_2[2] * RADIANS_TO_DEGREES);
+    Serial.print(euler_Sensor_2[2] * RADIANS_TO_DEGREES, 4);
     Serial.print("\t");
-    Serial.print(euler_Sensor_2[1] * RADIANS_TO_DEGREES);
+    Serial.print(euler_Sensor_2[1] * RADIANS_TO_DEGREES, 4);
     Serial.print("\t");
-    Serial.print(euler_Sensor_2[0] * RADIANS_TO_DEGREES);
-    Serial.println("\t");
+    Serial.print(euler_Sensor_2[0] * RADIANS_TO_DEGREES, 4);
+    Serial.print("\t");
+
+    Serial.print(euler_result[2] * RADIANS_TO_DEGREES, 4);
+    Serial.print("\t");
+    Serial.print(euler_result[1] * RADIANS_TO_DEGREES, 4);
+    Serial.print("\t");
+    Serial.print(euler_result[0] * RADIANS_TO_DEGREES, 4);
+    Serial.print("\t \t");
+
 #endif
 
 #ifdef COMPLEMENT_FILTER
@@ -1115,58 +1202,45 @@ void loop()
     lastUpdate = Now;
 
     Sensor_1.getMotion6(&Acc_x_Sensor_1, &Acc_y_Sensor_1, &Acc_z_Sensor_1, &Gyro_x_Sensor_1, &Gyro_y_Sensor_1, &Gyro_z_Sensor_1);
-
-    // Serial.print("Vor QUat Funktion: \t");
-    // Serial.print(Acc_x_Sensor_1);
-    // Serial.print("\t");
-    // Serial.print(Acc_y_Sensor_1);
-    // Serial.print("\t");
-    // Serial.print(Acc_z_Sensor_1);
-    // Serial.print("\t");
-
-    // Serial.print(Gyro_x_Sensor_1);
-    // Serial.print("\t");
-    // Serial.print(Gyro_y_Sensor_1);
-    // Serial.print("\t");
-    // Serial.print(Gyro_z_Sensor_1);
-    // Serial.print("\t");
+    Sensor_2.getMotion6(&Acc_x_Sensor_2, &Acc_y_Sensor_2, &Acc_z_Sensor_2, &Gyro_x_Sensor_2, &Gyro_y_Sensor_2, &Gyro_z_Sensor_2);
 
     float Acc_x_scaled_Sensor_1 = (float)Acc_x_Sensor_1 / ACC_SENS_FACTOR_2;
     float Acc_y_scaled_Sensor_1 = (float)Acc_y_Sensor_1 / ACC_SENS_FACTOR_2;
     float Acc_z_scaled_Sensor_1 = (float)Acc_z_Sensor_1 / ACC_SENS_FACTOR_2;
 
+    float Acc_x_scaled_Sensor_2 = (float)Acc_x_Sensor_2 / ACC_SENS_FACTOR_2;
+    float Acc_y_scaled_Sensor_2 = (float)Acc_y_Sensor_2 / ACC_SENS_FACTOR_2;
+    float Acc_z_scaled_Sensor_2 = (float)Acc_z_Sensor_2 / ACC_SENS_FACTOR_2;
+
     float Gyro_x_scaled_Sensor_1 = (float)Gyro_x_Sensor_1 / GYRO_SENS_FACTOR_250;
     float Gyro_y_scaled_Sensor_1 = (float)Gyro_y_Sensor_1 / GYRO_SENS_FACTOR_250;
     float Gyro_z_scaled_Sensor_1 = (float)Gyro_z_Sensor_1 / GYRO_SENS_FACTOR_250;
 
-    // Serial.print("Vor QUat Funktion: \t");
-    // Serial.print(Acc_x_scaled_Sensor_1);
-    // Serial.print("\t");
-    // Serial.print(Acc_y_scaled_Sensor_1);
-    // Serial.print("\t");
-    // Serial.print(Acc_z_scaled_Sensor_1);
-    // Serial.print("\t");
+    float Gyro_x_scaled_Sensor_2 = (float)Gyro_x_Sensor_2 / GYRO_SENS_FACTOR_250;
+    float Gyro_y_scaled_Sensor_2 = (float)Gyro_y_Sensor_2 / GYRO_SENS_FACTOR_250;
+    float Gyro_z_scaled_Sensor_2 = (float)Gyro_z_Sensor_2 / GYRO_SENS_FACTOR_250;
 
-    // Serial.print(Gyro_x_scaled_Sensor_1);
-    // Serial.print("\t");
-    // Serial.print(Gyro_y_scaled_Sensor_1);
-    // Serial.print("\t");
-    // Serial.print(Gyro_z_scaled_Sensor_1);
-    // Serial.print("\t");
-    MadgwickQuaternionUpdate(Acc_x_scaled_Sensor_1, Acc_y_scaled_Sensor_1, Acc_z_scaled_Sensor_1, Gyro_x_scaled_Sensor_1 * DEGREE_TO_RADIANS, Gyro_y_scaled_Sensor_1 * DEGREE_TO_RADIANS, Gyro_z_scaled_Sensor_1 * DEGREE_TO_RADIANS); // Gyro Werte müssen als rad/sec reingegeben werden
-
+    MadgwickQuaternionUpdate(Acc_x_scaled_Sensor_1, Acc_y_scaled_Sensor_1, Acc_z_scaled_Sensor_1, Gyro_x_scaled_Sensor_1 * DEGREE_TO_RADIANS, Gyro_y_scaled_Sensor_1 * DEGREE_TO_RADIANS, Gyro_z_scaled_Sensor_1 * DEGREE_TO_RADIANS, 1); // Gyro Werte müssen als rad/sec reingegeben werden
+    MadgwickQuaternionUpdate(Acc_x_scaled_Sensor_2, Acc_y_scaled_Sensor_2, Acc_z_scaled_Sensor_2, Gyro_x_scaled_Sensor_2 * DEGREE_TO_RADIANS, Gyro_y_scaled_Sensor_2 * DEGREE_TO_RADIANS, Gyro_z_scaled_Sensor_2 * DEGREE_TO_RADIANS, 2); // Gyro Werte müssen als rad/sec reingegeben werden
     delt_t = millis() - count;
     if (delt_t > 100)
     {
-        yaw_Sensor_1 = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);
-        pitch_Sensor_1 = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
-        roll_Sensor_1 = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
+        yaw_Sensor_1 = atan2(2.0f * (q_Sensor_1[1] * q_Sensor_1[2] + q_Sensor_1[0] * q_Sensor_1[3]), q_Sensor_1[0] * q_Sensor_1[0] + q_Sensor_1[1] * q_Sensor_1[1] - q_Sensor_1[2] * q_Sensor_1[2] - q_Sensor_1[3] * q_Sensor_1[3]);
+        pitch_Sensor_1 = -asin(2.0f * (q_Sensor_1[1] * q_Sensor_1[3] - q_Sensor_1[0] * q_Sensor_1[2]));
+        roll_Sensor_1 = atan2(2.0f * (q_Sensor_1[0] * q_Sensor_1[1] + q_Sensor_1[2] * q_Sensor_1[3]), q_Sensor_1[0] * q_Sensor_1[0] - q_Sensor_1[1] * q_Sensor_1[1] - q_Sensor_1[2] * q_Sensor_1[2] + q_Sensor_1[3] * q_Sensor_1[3]);
+
+        yaw_Sensor_2 = atan2(2.0f * (q_Sensor_2[1] * q_Sensor_2[2] + q_Sensor_2[0] * q_Sensor_2[3]), q_Sensor_2[0] * q_Sensor_2[0] + q_Sensor_2[1] * q_Sensor_2[1] - q_Sensor_2[2] * q_Sensor_2[2] - q_Sensor_2[3] * q_Sensor_2[3]);
+        pitch_Sensor_2 = -asin(2.0f * (q_Sensor_2[1] * q_Sensor_2[3] - q_Sensor_2[0] * q_Sensor_2[2]));
+        roll_Sensor_2 = atan2(2.0f * (q_Sensor_2[0] * q_Sensor_2[1] + q_Sensor_2[2] * q_Sensor_2[3]), q_Sensor_2[0] * q_Sensor_2[0] - q_Sensor_2[1] * q_Sensor_2[1] - q_Sensor_2[2] * q_Sensor_2[2] + q_Sensor_2[3] * q_Sensor_2[3]);
 
         yaw_Sensor_1 *= RADIANS_TO_DEGREES;
         pitch_Sensor_1 *= RADIANS_TO_DEGREES;
         roll_Sensor_1 *= RADIANS_TO_DEGREES;
 
-        Serial.print("YPR \t");
+        yaw_Sensor_2 *= RADIANS_TO_DEGREES;
+        pitch_Sensor_2 *= RADIANS_TO_DEGREES;
+        roll_Sensor_2 *= RADIANS_TO_DEGREES;
+
         Serial.print(yaw_Sensor_1);
         Serial.print("\t");
         Serial.print(pitch_Sensor_1);
@@ -1174,17 +1248,96 @@ void loop()
         Serial.print(roll_Sensor_1);
         Serial.println("\t");
 
-        // Serial.print(yaw_Sensor_1);
-        // Serial.print("\t");
-        // Serial.print(pitch_Sensor_1);
-        // Serial.print("\t");
-        // Serial.print(roll_Sensor_1);
-        // Serial.print("\t");
+        Serial.print(yaw_Sensor_2);
+        Serial.print("\t");
+        Serial.print(pitch_Sensor_2);
+        Serial.print("\t");
+        Serial.print(roll_Sensor_2);
+        Serial.print("\t \t");
 
         count = millis();
     }
 
 #endif
 
-    // Serial.println("");
+#ifdef SD_LOGGING
+    myFile = SD.open("test.txt", FILE_WRITE); // file öffnen und file descriptor auslesen
+    if (myFile)
+    {
+        myFile.print(Quat_counter);
+        myFile.print("\t \t ");
+        myFile.print(quaternion_Sensor_1.w, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_Sensor_1.x, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_Sensor_1.y, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_Sensor_1.z, 4);
+        myFile.print("\t \t ");
+        myFile.print(quaternion_Sensor_2.w, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_Sensor_2.x, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_Sensor_2.y, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_Sensor_2.z, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_result.w, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_result.x, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_result.y, 4);
+        myFile.print("\t");
+        myFile.print(quaternion_result.z, 4);
+        myFile.print("\t \t");
+
+        myFile.print(euler_Sensor_1[2] * RADIANS_TO_DEGREES, 4); // x
+        myFile.print("\t");
+        myFile.print(euler_Sensor_1[1] * RADIANS_TO_DEGREES, 4); // y
+        myFile.print("\t");
+        myFile.print(euler_Sensor_1[0] * RADIANS_TO_DEGREES, 4); // z
+        myFile.print("\t");
+
+        myFile.print(euler_Sensor_2[2] * RADIANS_TO_DEGREES, 4);
+        myFile.print("\t");
+        myFile.print(euler_Sensor_2[1] * RADIANS_TO_DEGREES, 4);
+        myFile.print("\t");
+        myFile.print(euler_Sensor_2[0] * RADIANS_TO_DEGREES, 4);
+        myFile.print("\t");
+
+        myFile.print(euler_result[2] * RADIANS_TO_DEGREES, 4);
+        myFile.print("\t");
+        myFile.print(euler_result[1] * RADIANS_TO_DEGREES, 4);
+        myFile.print("\t");
+        myFile.print(euler_result[0] * RADIANS_TO_DEGREES, 4);
+        myFile.print("\t \t");
+
+        myFile.print(yaw_Sensor_1);
+        myFile.print("\t");
+        myFile.print(pitch_Sensor_1);
+        myFile.print("\t");
+        myFile.print(roll_Sensor_1);
+        myFile.print("\t");
+
+        myFile.print(yaw_Sensor_2);
+        myFile.print("\t");
+        myFile.print(pitch_Sensor_2);
+        myFile.print("\t");
+        myFile.print(roll_Sensor_2);
+        myFile.println("");
+        myFile.close();
+        Quat_counter++;
+        delay(100); // Ausgabe etwa in 0,1 sec Schritten
+    }
+    else
+    {
+        Serial.println("error opening test.txt"); //Fehlerfall Ausgabe
+    }
+#endif
+
+#ifdef OLED_OUTPUT
+
+    updateHorizon(euler_result[2] * RADIANS_TO_DEGREES, -euler_result[1] * RADIANS_TO_DEGREES);
+
+#endif
 }
