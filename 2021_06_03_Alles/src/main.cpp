@@ -1267,71 +1267,71 @@ void loop()
 
 #ifdef SD_LOGGING
     SD.begin(29); // Starte erneut den SPI wenn er ihn braucht
-    pinMode(29, OUTPUT);
-    digitalWrite(29, HIGH);
+    // pinMode(29, OUTPUT);
+    // digitalWrite(29, HIGH);
 
-    settings = SPISettings(250000, MSBFIRST, SPI_MODE0);
-    SPI.beginTransaction(settings);
-    SPI.endTransaction();
-    digitalWrite(27, LOW);
+    // settings = SPISettings(250000, MSBFIRST, SPI_MODE0);
+    // SPI.beginTransaction(settings);
+    // SPI.endTransaction();
+    // digitalWrite(27, LOW);
 
     myFile = SD.open("test.txt", FILE_WRITE); // file öffnen und file descriptor auslesen
     if (myFile)
     {
         myFile.print(Quat_counter);
         myFile.print("\t");
-        myFile.print(quaternion_Sensor_1.w, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_Sensor_1.x, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_Sensor_1.y, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_Sensor_1.z, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_Sensor_2.w, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_Sensor_2.x, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_Sensor_2.y, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_Sensor_2.z, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_result.w, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_result.x, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_result.y, 4);
-        myFile.print("\t");
-        myFile.print(quaternion_result.z, 4);
-        myFile.print("\t");
+        // myFile.print(quaternion_Sensor_1.w, 4);
+        // myFile.print("\t");
+        // myFile.print(quaternion_Sensor_1.x, 4);
+        // myFile.print("\t");
+        // myFile.print(quaternion_Sensor_1.y, 4);
+        // myFile.print("\t");
+        // myFile.print(quaternion_Sensor_1.z, 4);
+        // myFile.print("\t");
+        // myFile.print(quaternion_Sensor_2.w, 4);
+        // myFile.print("\t");
+        // myFile.print(quaternion_Sensor_2.x, 4);
+        // myFile.print("\t");
+        // myFile.print(quaternion_Sensor_2.y, 4);
+        // myFile.print("\t");
+        // myFile.print(quaternion_Sensor_2.z, 4);
+        // myFile.print("\t");
+        // myFile.print(quaternion_result.w, 4);
+        // myFile.print("\t");
+        // myFile.print(quaternion_result.x, 4);
+        // myFile.print("\t");
+        // myFile.print(quaternion_result.y, 4);
+        // myFile.print("\t");
+        // myFile.print(quaternion_result.z, 4);
+        // myFile.print("\t");
 
-        myFile.print(euler_Sensor_1[2] * RADIANS_TO_DEGREES, 4); // x
-        myFile.print("\t");
-        myFile.print(euler_Sensor_1[1] * RADIANS_TO_DEGREES, 4); // y
-        myFile.print("\t");
-        myFile.print(euler_Sensor_1[0] * RADIANS_TO_DEGREES, 4); // z
-        myFile.print("\t");
+        // myFile.print(euler_Sensor_1[2] * RADIANS_TO_DEGREES, 4); // x
+        // myFile.print("\t");
+        // myFile.print(euler_Sensor_1[1] * RADIANS_TO_DEGREES, 4); // y
+        // myFile.print("\t");
+        // myFile.print(euler_Sensor_1[0] * RADIANS_TO_DEGREES, 4); // z
+        // myFile.print("\t");
 
-        myFile.print(euler_Sensor_2[2] * RADIANS_TO_DEGREES, 4);
-        myFile.print("\t");
-        myFile.print(euler_Sensor_2[1] * RADIANS_TO_DEGREES, 4);
-        myFile.print("\t");
-        myFile.print(euler_Sensor_2[0] * RADIANS_TO_DEGREES, 4);
-        myFile.print("\t");
+        // myFile.print(euler_Sensor_2[2] * RADIANS_TO_DEGREES, 4);
+        // myFile.print("\t");
+        // myFile.print(euler_Sensor_2[1] * RADIANS_TO_DEGREES, 4);
+        // myFile.print("\t");
+        // myFile.print(euler_Sensor_2[0] * RADIANS_TO_DEGREES, 4);
+        // myFile.print("\t");
 
-        myFile.print(euler_result[2] * RADIANS_TO_DEGREES, 4);
-        myFile.print("\t");
-        myFile.print(euler_result[1] * RADIANS_TO_DEGREES, 4);
-        myFile.print("\t");
-        myFile.print(euler_result[0] * RADIANS_TO_DEGREES, 4);
-        myFile.print("\t");
+        // myFile.print(euler_result[2] * RADIANS_TO_DEGREES, 4);
+        // myFile.print("\t");
+        // myFile.print(euler_result[1] * RADIANS_TO_DEGREES, 4);
+        // myFile.print("\t");
+        // myFile.print(euler_result[0] * RADIANS_TO_DEGREES, 4);
+        // myFile.print("\t");
 
-        myFile.print(yaw_Sensor_1);
-        myFile.print("\t");
-        myFile.print(pitch_Sensor_1);
-        myFile.print("\t");
-        myFile.print(roll_Sensor_1);
-        myFile.print("\t");
+        // myFile.print(yaw_Sensor_1);
+        // myFile.print("\t");
+        // myFile.print(pitch_Sensor_1);
+        // myFile.print("\t");
+        // myFile.print(roll_Sensor_1);
+        // myFile.print("\t");
 
         myFile.print(yaw_Sensor_2);
         myFile.print("\t");
