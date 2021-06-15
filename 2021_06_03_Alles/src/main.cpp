@@ -95,7 +95,7 @@
 ///////// OLED Output /////////////
 ///////////////////////////////////
 
-// #define OLED_OUTPUT
+#define OLED_OUTPUT
 
 #ifdef OLED_OUTPUT
 #define REDRAW_DELAY 16 // minimum delay in milliseconds between display updates
@@ -259,6 +259,7 @@ float roll_Sensor_2;
 
 #ifdef SD_LOGGING
 File myFile;
+static SPISettings settings;
 unsigned long Quat_counter = 0;
 #endif
 
@@ -779,9 +780,11 @@ void updateHorizon(int roll, int pitch)
 
 #endif
 
-//################################################################//
-//########################### SETUP ##############################//
-//################################################################//
+//###############################################################################################################################//
+//###############################################################################################################################//
+//######################################################### SETUP  ###############################################################//
+//###############################################################################################################################//
+//###############################################################################################################################//
 
 void setup()
 {
@@ -989,9 +992,11 @@ void setup()
     delay(3000); // Start abwarten bis eingependelt nach Kalibrierung
 }
 
-//################################################################//
-//############################ Loop  #############################//
-//################################################################//
+//###############################################################################################################################//
+//###############################################################################################################################//
+//######################################################### Loop  ###############################################################//
+//###############################################################################################################################//
+//###############################################################################################################################//
 
 void loop()
 {
@@ -1101,26 +1106,26 @@ void loop()
     Sensor_2.dmpGetEuler(euler_Sensor_2, &quaternion_Sensor_2);
     getMeanValue_Eulerwinkel(euler_result);
 
-    Serial.print(euler_Sensor_1[2] * RADIANS_TO_DEGREES, 4); // x
-    Serial.print("\t");
-    Serial.print(euler_Sensor_1[1] * RADIANS_TO_DEGREES, 4); // y
-    Serial.print("\t");
-    Serial.print(euler_Sensor_1[0] * RADIANS_TO_DEGREES, 4); // z
-    Serial.print("\t");
+    // Serial.print(euler_Sensor_1[2] * RADIANS_TO_DEGREES, 4); // x
+    // Serial.print("\t");
+    // Serial.print(euler_Sensor_1[1] * RADIANS_TO_DEGREES, 4); // y
+    // Serial.print("\t");
+    // Serial.print(euler_Sensor_1[0] * RADIANS_TO_DEGREES, 4); // z
+    // Serial.print("\t");
 
-    Serial.print(euler_Sensor_2[2] * RADIANS_TO_DEGREES, 4);
-    Serial.print("\t");
-    Serial.print(euler_Sensor_2[1] * RADIANS_TO_DEGREES, 4);
-    Serial.print("\t");
-    Serial.print(euler_Sensor_2[0] * RADIANS_TO_DEGREES, 4);
-    Serial.print("\t");
+    // Serial.print(euler_Sensor_2[2] * RADIANS_TO_DEGREES, 4);
+    // Serial.print("\t");
+    // Serial.print(euler_Sensor_2[1] * RADIANS_TO_DEGREES, 4);
+    // Serial.print("\t");
+    // Serial.print(euler_Sensor_2[0] * RADIANS_TO_DEGREES, 4);
+    // Serial.print("\t");
 
-    Serial.print(euler_result[2] * RADIANS_TO_DEGREES, 4);
-    Serial.print("\t");
-    Serial.print(euler_result[1] * RADIANS_TO_DEGREES, 4);
-    Serial.print("\t");
-    Serial.print(euler_result[0] * RADIANS_TO_DEGREES, 4);
-    Serial.print("\t \t");
+    // Serial.print(euler_result[2] * RADIANS_TO_DEGREES, 4);
+    // Serial.print("\t");
+    // Serial.print(euler_result[1] * RADIANS_TO_DEGREES, 4);
+    // Serial.print("\t");
+    // Serial.print(euler_result[0] * RADIANS_TO_DEGREES, 4);
+    // Serial.print("\t \t");
 
 #endif
 
@@ -1241,19 +1246,19 @@ void loop()
         pitch_Sensor_2 *= RADIANS_TO_DEGREES;
         roll_Sensor_2 *= RADIANS_TO_DEGREES;
 
-        Serial.print(yaw_Sensor_1);
-        Serial.print("\t");
-        Serial.print(pitch_Sensor_1);
-        Serial.print("\t");
-        Serial.print(roll_Sensor_1);
-        Serial.print("\t");
+        // Serial.print(yaw_Sensor_1);
+        // Serial.print("\t");
+        // Serial.print(pitch_Sensor_1);
+        // Serial.print("\t");
+        // Serial.print(roll_Sensor_1);
+        // Serial.print("\t");
 
-        Serial.print(yaw_Sensor_2);
-        Serial.print("\t");
-        Serial.print(pitch_Sensor_2);
-        Serial.print("\t");
-        Serial.print(roll_Sensor_2);
-        Serial.println("\t \t");
+        // Serial.print(yaw_Sensor_2);
+        // Serial.print("\t");
+        // Serial.print(pitch_Sensor_2);
+        // Serial.print("\t");
+        // Serial.print(roll_Sensor_2);
+        // Serial.println("\t \t");
 
         count = millis();
     }
@@ -1261,6 +1266,15 @@ void loop()
 #endif
 
 #ifdef SD_LOGGING
+    SD.begin(29); // Starte erneut den SPI wenn er ihn braucht
+    pinMode(29, OUTPUT);
+    digitalWrite(29, HIGH);
+
+    settings = SPISettings(250000, MSBFIRST, SPI_MODE0);
+    SPI.beginTransaction(settings);
+    SPI.endTransaction();
+    digitalWrite(27, LOW);
+
     myFile = SD.open("test.txt", FILE_WRITE); // file öffnen und file descriptor auslesen
     if (myFile)
     {
@@ -1327,7 +1341,7 @@ void loop()
         myFile.println("");
         myFile.close();
         Quat_counter++;
-        delay(100); // Ausgabe etwa in 0,1 sec Schritten
+        // delay(100); // Ausgabe etwa in 0,1 sec Schritten
     }
     else
     {
