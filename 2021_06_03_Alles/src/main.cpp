@@ -624,11 +624,71 @@ void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, 
 
 #ifdef OLED_OUTPUT
 
+// #########################################################################
+// Draw a circular or elliptical arc with a defined thickness
+// #########################################################################
+
+// x,y == coords of centre of arc
+// start_angle = 0 - 359
+// seg_count = number of 3 degree segments to draw (120 => 360 degree arc)
+// rx = x axis radius
+// yx = y axis radius
+// w  = width (thickness) of arc in pixels
+// colour = 16 bit colour value
+// Note if rx and ry are the same then an arc of a circle is drawn
+
+int fillArc2(int x, int y, int start_angle, int seg_count, int rx, int ry, int w, unsigned int colour)
+{
+
+    byte seg = 3; // Segments are 3 degrees wide = 120 segments for 360 degrees
+    byte inc = 3; // Draw segments every 3 degrees, increase to 6 for segmented ring
+
+    // Calculate first pair of coordinates for segment start
+    float sx = cos((start_angle - 90) * DEG2RAD);
+    float sy = sin((start_angle - 90) * DEG2RAD);
+    uint16_t x0 = sx * (rx - w) + x;
+    uint16_t y0 = sy * (ry - w) + y;
+    uint16_t x1 = sx * rx + x;
+    uint16_t y1 = sy * ry + y;
+
+    // Draw colour blocks every inc degrees
+    for (int i = start_angle; i < start_angle + seg * seg_count; i += inc)
+    {
+
+        // Calculate pair of coordinates for segment end
+        float sx2 = cos((i + seg - 90) * DEG2RAD);
+        float sy2 = sin((i + seg - 90) * DEG2RAD);
+        int x2 = sx2 * (rx - w) + x;
+        int y2 = sy2 * (ry - w) + y;
+        int x3 = sx2 * rx + x;
+        int y3 = sy2 * ry + y;
+
+        tft.fillTriangle(x0, y0, x1, y1, x2, y2, colour);
+        tft.fillTriangle(x1, y1, x2, y2, x3, y3, colour);
+
+        // Copy segment end to sgement start for next segment
+        x0 = x2;
+        y0 = y2;
+        x1 = x3;
+        y1 = y3;
+    }
+}
+
 void drawHorizon(int roll, int pitch)
 {
     // Calculate coordinates for line start
     float sx = cos(roll * DEG2RAD);
     float sy = sin(roll * DEG2RAD);
+
+    // Calculate coordinates for line start
+    float cos_roll = cos(-roll * DEG2RAD);
+    float sin_roll = sin(-roll * DEG2RAD);
+
+    // Calculate coordinates for line start
+    float cos_last_roll = cos(-last_roll * DEG2RAD);
+    float sin_last_roll = sin(-last_roll * DEG2RAD);
+
+    /// Horizontal Linie
 
     int16_t x0 = sx * HOR;
     int16_t y0 = sy * HOR;
@@ -668,6 +728,11 @@ void drawHorizon(int roll, int pitch)
         ydn = 3 * yd;
         tft.drawLine(XC - x0 - xdn, YC - y0 - ydn - pitch, XC + x0 - xdn, YC + y0 - ydn - pitch, SKY_BLUE);
         tft.drawLine(XC - x0 + xdn, YC - y0 + ydn - pitch, XC + x0 + xdn, YC + y0 + ydn - pitch, BROWN);
+
+        // // Roll Pfeil Markierung
+        // tft.drawCircle(80 - last_sy * 58, 64 - last_sx * 58, 2, SKY_BLUE); // alte Markierung übermalen
+        // // Roll Pfeil Markierung
+        // tft.drawCircle(80 - sy * 58, 64 - sx * 58, 2, TFT_RED);
     }
     xdn = 2 * xd;
     ydn = 2 * yd;
@@ -678,6 +743,10 @@ void drawHorizon(int roll, int pitch)
     tft.drawLine(XC - x0 + xd, YC - y0 + yd - pitch, XC + x0 + xd, YC + y0 + yd - pitch, BROWN);
 
     tft.drawLine(XC - x0, YC - y0 - pitch, XC + x0, YC + y0 - pitch, TFT_WHITE);
+
+    /// Draw Chevron Line
+    tft.drawLine(80 - sin_last_roll * 60, 64 - cos_last_roll * 60, (80 - sin_last_roll * 60) + sin_last_roll * 10, (64 - cos_last_roll * 60) + cos_last_roll * 10, SKY_BLUE);
+    tft.drawLine(80 - sin_roll * 60, 64 - cos_roll * 60, (80 - sin_roll * 60) + sin_roll * 10, (64 - cos_roll * 60) + cos_roll * 10, TFT_RED);
 
     last_roll = roll;
     last_pitch = pitch;
@@ -731,11 +800,28 @@ void drawInfo(void)
     tft.setTextColor(TFT_YELLOW, BROWN); // Text with background
     tft.setTextDatum(MC_DATUM);          // Centre middle justified
     tft.setTextPadding(24);              // Padding width to wipe previous number
-    // tft.setCursor(74, 120);
-    // tft.print("Roll: ");
-    tft.drawNumber(-last_roll, 80, 120, 1);
-    // tft.setCursor(82, 120);
-    // tft.print(" °");
+
+    tft.setTextSize(1);
+    tft.setCursor(5, 105);
+    tft.print("Roll");
+    tft.drawNumber(-last_roll, 15, 120, 1);
+
+    tft.setCursor(125, 105);
+    tft.print("Pitch");
+    tft.drawNumber(last_pitch, 140, 120, 1);
+
+    // 120° Kreis für Roll Winkel / Chevron Anzeige
+    fillArc2(80, 64, -60, 40, 60, 60, 1, TFT_WHITE);
+
+    /// 0° Linie
+    tft.drawFastVLine(80, 0, 4, TFT_WHITE);
+
+    /// 30° Linie
+    tft.drawLine(50, 12, 46, 8, TFT_WHITE);
+    tft.drawLine(28, 34, 24, 30, TFT_WHITE);
+    /// 60° Linie
+    tft.drawLine(110, 12, 114, 8, TFT_WHITE);
+    tft.drawLine(132, 34, 136, 30, TFT_WHITE);
 }
 
 // #########################################################################
@@ -849,6 +935,28 @@ void setup()
     DMP_Status_Int_Sensor_2 = Sensor_2.dmpInitialize(); // wenn funktioniert wird Status = 0   // beschreiben der DMP Register Sensor 2 // Gyro Range wird auf +- 250 °/sec gesetzt // FIFO Data available interrupt wird aktiviert
 
     /////////////////////////////////////////////
+    //////////////  OLED Startup ////////////////
+    /////////////////////////////////////////////
+
+#ifdef OLED_OUTPUT
+
+    tft.begin();
+    tft.setRotation(1); // Setzen auf Querformat 160 x 128
+
+    tft.fillScreen(0x0000);
+    tft.setTextColor(0xFFFF);
+    tft.setTextPadding(24); // Padding width to wipe previous number
+
+#ifdef PID_OFFSET
+
+    tft.setCursor(80 - 55, 64);
+    tft.print("Sensor initializing"); // Informiere über Sensor PID initialising
+
+#endif
+
+#endif
+
+    /////////////////////////////////////////////
     ////////////// Set Offsets //////////////////
     /////////////////////////////////////////////
 
@@ -936,6 +1044,14 @@ void setup()
 #endif
 
 #ifdef SD_LOGGING
+
+#ifdef PID_OFFSET
+    tft.fillScreen(0x0000);
+    tft.setCursor(80 - 55, 64);
+    tft.print("SD Card initializing"); // Informiere über Sensor PID initialising
+    delay(1000);
+#endif
+
     Serial.print("Initializing SD card...");
 
     if (!SD.begin(29)) // Channel Select des SPI liegt auf Pi n 29 am ATMega Entwicklungsboard
@@ -950,17 +1066,23 @@ void setup()
 
 #ifdef OLED_OUTPUT
 
-    tft.begin();
-    tft.setRotation(1); // Setzen auf Querformat 160 x 128
+#ifdef PID_OFFSET
+    tft.fillScreen(0x0000);
+    tft.setCursor(80 - 53, 64);
+    tft.print("Initializing done!"); // Informiere über Sensor PID initialising
+    delay(2000);
+    tft.fillScreen(0x0000);
+
+#endif
+
     tft.fillRect(0, 0, 160, 64, SKY_BLUE);
     tft.fillRect(0, 64, 160, 64, BROWN);
     delay(1000);
-
-    // Draw the horizon graphic
     drawHorizon(0, 0);
+
     delay(1000);
     drawInfo();
-    delay(1000); // Wait to permit visual check
+    delay(500); // Wait to permit visual check
 
 #endif
 
@@ -1086,7 +1208,7 @@ void loop()
     Serial.print(yaw_pitch_roll_Sensor_2[1] * RADIANS_TO_DEGREES);
     Serial.print("\t");
     Serial.print(yaw_pitch_roll_Sensor_2[2] * RADIANS_TO_DEGREES);
-    Serial.print("\t");
+    Serial.println("\t");
 #endif
 
 #ifdef EULER_VALUES
@@ -1280,95 +1402,95 @@ void loop()
     if (myFile)
     {
         myFile.print(Quat_counter);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(quaternion_Sensor_1.w, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(quaternion_Sensor_1.x, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(quaternion_Sensor_1.y, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(quaternion_Sensor_1.z, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(quaternion_Sensor_2.w, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(quaternion_Sensor_2.x, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(quaternion_Sensor_2.y, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(quaternion_Sensor_2.z, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(quaternion_result.w, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(quaternion_result.x, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(quaternion_result.y, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(quaternion_result.z, 4);
-        myFile.print("\t");
+        myFile.print(",");
 
         myFile.print(euler_Sensor_1[2] * RADIANS_TO_DEGREES, 4); // x
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(euler_Sensor_1[1] * RADIANS_TO_DEGREES, 4); // y
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(euler_Sensor_1[0] * RADIANS_TO_DEGREES, 4); // z
-        myFile.print("\t");
+        myFile.print(",");
 
         myFile.print(euler_Sensor_2[2] * RADIANS_TO_DEGREES, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(euler_Sensor_2[1] * RADIANS_TO_DEGREES, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(euler_Sensor_2[0] * RADIANS_TO_DEGREES, 4);
-        myFile.print("\t");
+        myFile.print(",");
 
         myFile.print(euler_result[2] * RADIANS_TO_DEGREES, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(euler_result[1] * RADIANS_TO_DEGREES, 4);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(euler_result[0] * RADIANS_TO_DEGREES, 4);
-        myFile.print("\t");
+        myFile.print(",");
 
         myFile.print(yaw_Sensor_1);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(pitch_Sensor_1);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(roll_Sensor_1);
-        myFile.print("\t");
+        myFile.print(",");
 
         myFile.print(yaw_Sensor_2);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(pitch_Sensor_2);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(roll_Sensor_2);
-        myFile.print("\t");
+        myFile.print(",");
 
         myFile.print(Acc_x_Sensor_1);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(Acc_y_Sensor_1);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(Acc_z_Sensor_1);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(Gyro_x_Sensor_1);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(Gyro_y_Sensor_1);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(Gyro_z_Sensor_1);
-        myFile.print("\t");
+        myFile.print(",");
 
         myFile.print(Acc_x_Sensor_2);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(Acc_y_Sensor_2);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(Acc_z_Sensor_2);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(Gyro_x_Sensor_2);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(Gyro_y_Sensor_2);
-        myFile.print("\t");
+        myFile.print(",");
         myFile.print(Gyro_z_Sensor_2);
         myFile.println("");
         myFile.close();
         Quat_counter++;
-        // delay(100); // Ausgabe etwa in 0,1 sec Schritten
+        delay(10); // Ausgabe etwa in 0,01 sec Schritten
     }
     else
     {
