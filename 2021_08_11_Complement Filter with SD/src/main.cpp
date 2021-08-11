@@ -31,6 +31,8 @@
 
 #include <Wire.h>
 #include <Arduino.h>
+#include <SPI.h>
+#include <SD.h>
 
 // The name of the sensor is "MPU-6050".
 // For program code, I omit the '-',
@@ -44,6 +46,9 @@
 // the registers in that unknown area are for gain
 // and offsets.
 //
+
+#define SD_LOGGING
+
 #define MPU6050_AUX_VDDIO 0x01          // R/W
 #define MPU6050_SMPLRT_DIV 0x19         // R/W
 #define MPU6050_CONFIG 0x1A             // R/W
@@ -616,6 +621,11 @@
 // I2C address thus becomes 0x69.
 #define MPU6050_I2C_ADDRESS 0x68
 
+#ifdef SD_LOGGING
+File myFile;
+unsigned long Quat_counter = 0;
+#endif
+
 // Declaring an union for the registers and the axis values.
 // The byte order does not match the byte order of
 // the compiler and AVR chip.
@@ -924,6 +934,16 @@ void setup()
   //Initialize the angles
   calibrate_sensors();
   set_last_read_angle_data(millis(), 0, 0, 0, 0, 0, 0);
+
+  Serial.print("Initializing SD card...");
+
+  if (!SD.begin(29)) // Channel Select des SPI liegt auf Pi n 29 am ATMega Entwicklungsboard
+  {
+    Serial.println("initialization failed!");
+    while (1)
+      ;
+  }
+  Serial.println("SD Card SPI initialization done.");
 }
 
 void loop()
@@ -1028,36 +1048,55 @@ void loop()
   // Update the saved data with the latest values
   set_last_read_angle_data(t_now, angle_x, angle_y, angle_z, unfiltered_gyro_angle_x, unfiltered_gyro_angle_y, unfiltered_gyro_angle_z);
 
-  // Send the data to the serial port
-  Serial.print(F("DEL:")); //Delta T
-  Serial.print("\t");
-  Serial.print(dt, DEC);
-  Serial.print("\t");
-  Serial.print(F("#ACC:")); //Accelerometer angle
-  Serial.print("\t");
-  Serial.print(accel_angle_x, 2);
-  Serial.print("\t");
-  Serial.print(accel_angle_y, 2);
-  Serial.print("\t");
-  Serial.print(accel_angle_z, 2);
-  Serial.print("\t");
-  Serial.print(F("#GYR:"));
-  Serial.print("\t");
-  Serial.print(unfiltered_gyro_angle_x, 2); //Gyroscope angle
-  Serial.print("\t");
-  Serial.print(unfiltered_gyro_angle_y, 2);
-  Serial.print("\t");
-  Serial.print(unfiltered_gyro_angle_z, 2);
-  Serial.print("\t");
-  Serial.print(F("#FIL:")); //Filtered angle
-  Serial.print("\t");
-  Serial.print(angle_x, 2);
-  Serial.print("\t");
-  Serial.print(angle_y, 2);
-  Serial.print("\t");
-  Serial.print(angle_z, 2);
-  Serial.println(F(""));
+  // // Send the data to the serial port
+  // Serial.print(F("DEL:")); //Delta T
+  // Serial.print("\t");
+  // Serial.print(dt, DEC);
+  // Serial.print("\t");
+  // Serial.print(F("#ACC:")); //Accelerometer angle
+  // Serial.print("\t");
+  // Serial.print(accel_angle_x, 2);
+  // Serial.print("\t");
+  // Serial.print(accel_angle_y, 2);
+  // Serial.print("\t");
+  // Serial.print(accel_angle_z, 2);
+  // Serial.print("\t");
+  // Serial.print(F("#GYR:"));
+  // Serial.print("\t");
+  // Serial.print(unfiltered_gyro_angle_x, 2); //Gyroscope angle
+  // Serial.print("\t");
+  // Serial.print(unfiltered_gyro_angle_y, 2);
+  // Serial.print("\t");
+  // Serial.print(unfiltered_gyro_angle_z, 2);
+  // Serial.print("\t");
+  // Serial.print(F("#FIL:")); //Filtered angle
+  // Serial.print("\t");
+  // Serial.print(angle_x, 2);
+  // Serial.print("\t");
+  // Serial.print(angle_y, 2);
+  // Serial.print("\t");
+  // Serial.print(angle_z, 2);
+  // Serial.println(F(""));
 
-  // Delay so we don't swamp the serial port
-  delay(10);
+  myFile = SD.open("test.txt", FILE_WRITE); // file öffnen und file descriptor auslesen
+  if (myFile)
+  {
+    myFile.print(Quat_counter);
+    myFile.print(",");
+    myFile.print(angle_x, 2);
+    myFile.print(",");
+    myFile.print(angle_y, 2);
+    myFile.print(",");
+    myFile.print(angle_z, 2);
+    myFile.println("");
+    myFile.close();
+    Quat_counter++;
+
+    // Delay so we don't swamp the serial port
+    delay(10);
+  }
+  else
+  {
+    Serial.println("error opening test.txt"); //Fehlerfall Ausgabe
+  }
 }

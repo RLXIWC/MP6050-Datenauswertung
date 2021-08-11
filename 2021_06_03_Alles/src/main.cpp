@@ -875,6 +875,11 @@ void updateHorizon(int roll, int pitch)
 
 void setup()
 {
+    // LED festlegen //
+
+    pinMode(4, OUTPUT);
+    pinMode(5, OUTPUT);
+
     /// I2C einrichten ///
     Wire.begin();          // Starte I2C
     Wire.setClock(400000); // Übertragungsgeschwindigkeit auf 400 kHz setzen (Fastwire)
@@ -989,6 +994,7 @@ void setup()
     if (DMP_Status_Int_Sensor_1 == 0)
     {
 #ifdef PID_OFFSET
+        digitalWrite(4, HIGH);            // Kontroll LED anschalten
         Sensor_1.CalibrateAccel(pidloop); // Starten des PID Reglers
         Sensor_1.CalibrateGyro(pidloop);
 #endif
@@ -1001,6 +1007,7 @@ void setup()
         DMP_Status_Bool_Sensor_1 = true; // alles geklappt -> setze DMP Status auf True
 
         Serial.println("DMP Sensor 1 Initializing Succeeded");
+        digitalWrite(4, LOW); // Kontroll LED ausschalten
     }
     else
     {
@@ -1014,6 +1021,7 @@ void setup()
     if (DMP_Status_Int_Sensor_2 == 0)
     {
 #ifdef PID_OFFSET
+        digitalWrite(4, HIGH);            // Kontroll LED anschalten
         Sensor_2.CalibrateAccel(pidloop); // Starten des PID Reglers
         Sensor_2.CalibrateGyro(pidloop);
 #endif
@@ -1026,6 +1034,7 @@ void setup()
         DMP_Status_Bool_Sensor_2 = true; // alles geklappt -> setze DMP Status auf True
 
         Serial.println("DMP Sensor 2 Initializing Succeeded");
+        digitalWrite(4, LOW); // Kontroll LED ausschalten
     }
     else
     {
@@ -1123,6 +1132,7 @@ void setup()
 
 void loop()
 {
+    digitalWrite(5, HIGH); // Kontroll LED anschalten
 
     if (!DMP_Status_Bool_Sensor_1 || !DMP_Status_Bool_Sensor_2) // Initialize nicht funktioniert -> kein Start
     {
@@ -1490,7 +1500,8 @@ void loop()
         myFile.println("");
         myFile.close();
         Quat_counter++;
-        delay(10); // Ausgabe etwa in 0,01 sec Schritten
+        digitalWrite(5, LOW); // Kontroll LED ausschalten
+        delay(10);            // Ausgabe etwa in 0,01 sec Schritten
     }
     else
     {
