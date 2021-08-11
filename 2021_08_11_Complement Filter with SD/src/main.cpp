@@ -889,6 +889,10 @@ void calibrate_sensors()
 
 void setup()
 {
+
+  pinMode(4, OUTPUT);
+  pinMode(5, OUTPUT);
+
   int error;
   uint8_t c;
 
@@ -948,6 +952,9 @@ void setup()
 
 void loop()
 {
+
+  digitalWrite(5, HIGH);
+
   int error;
   double dT;
   accel_t_gyro_union accel_t_gyro;
@@ -1097,6 +1104,7 @@ void loop()
   }
   else
   {
+    digitalWrite(5, LOW);
     Serial.println("error opening test.txt"); //Fehlerfall Ausgabe
   }
 }
