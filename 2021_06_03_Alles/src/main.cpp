@@ -1500,12 +1500,12 @@ void loop()
         myFile.println("");
         myFile.close();
         Quat_counter++;
-        digitalWrite(5, LOW); // Kontroll LED ausschalten
-        delay(10);            // Ausgabe etwa in 0,01 sec Schritten
+        delay(10); // Ausgabe etwa in 0,01 sec Schritten
     }
     else
     {
         Serial.println("error opening test.txt"); //Fehlerfall Ausgabe
+        digitalWrite(5, LOW);                     // Kontroll LED ausschalten -> schreiben fehlgeschlagen
     }
 #endif
 
