@@ -6,7 +6,7 @@
 *
 * Kurze Beschreibung:
 * Test aller möglichen Ausgaben und Offset Einstellungen
-* Fusion aus 2 Sensoren
+* Verknüpfung aus 2 Sensoren
 *
 * Ausgabe:
 * Quaternion, Eulerwinkel, YPR, Raw Values Gyro und Acc
@@ -14,10 +14,11 @@
 * Anschluss weiterer Elektronik:
 * 2x MPU6050 per I2C anschließen, VCC, GND, SCL an PIN 16, SDA an PIN 15 ((ATMega 2560)
 * zweiter MPU erhält Spannungsversorgung über AD0 statt über VCC (andere Adresse im I2C Bus)
-*
-* Changelog:
-* 
-*  
+* Anschluss OLED Dispaly und SD Card Reader per SPI 
+
+* #############################################################
+* ###### siehe Anhang Dokumentation für Anschlussschema #######
+* #############################################################
 */
 
 //################################################################//
